@@ -1,5 +1,9 @@
-# Project template
-This is the project template from the Umeå Plant Science Centre Bioinformatics Facility. 
+# ShortTermNitrateTimeSeries-SNRIV
 
-To use it for your project, you can check this [GitHub gist](https://gist.github.com/nicolasDelhomme/46a1053d277510b95692318bd1732b6d)
+## Abstract
+Hybrid aspen was grown under controlled nitrogen conditions. These trees were treated with nitrate and samples were taken for RNA sequencing at specific time points to trace gene expression changes in wood.
+
+## Setup
+
+
 
