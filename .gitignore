@@ -49,3 +49,6 @@ reference/
 singularity
 singularity/
 
+# pipeline
+.nextflow*
+

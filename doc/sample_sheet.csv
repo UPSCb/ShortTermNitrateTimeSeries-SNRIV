@@ -1,4 +1,4 @@
-sample,fastq_1,fastg_2,strandedness
+sample,fastq_1,fastq_2,strandedness
 P30857_103,data/raw/P30857_103_S1_L001_R1_001.fastq.gz,data/raw/P30857_103_S1_L001_R2_001.fastq.gz,auto
 P30857_104,data/raw/P30857_104_S2_L001_R1_001.fastq.gz,data/raw/P30857_104_S2_L001_R2_001.fastq.gz,auto
 P30857_105,data/raw/P30857_105_S3_L001_R1_001.fastq.gz,data/raw/P30857_105_S3_L001_R2_001.fastq.gz,auto
