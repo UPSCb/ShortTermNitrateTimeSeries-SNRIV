@@ -14,7 +14,7 @@ ln -s /mnt/picea/projects/aspseq/htuominen/ShortTermNitrateTimeSeries-SNRIV data
 ```bash
  nextflow run nf-core/rnaseq -r 3.14.0 \
   -profile upscb,singularity -work-dir data/work \
-  -params-file nf-params.json -c nextflow/upscb.config
+  -params-file nextflow/nf-params.json -c nextflow/upscb.config
 ```
 
 
