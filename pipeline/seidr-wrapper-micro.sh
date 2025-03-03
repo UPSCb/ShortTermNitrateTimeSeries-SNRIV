@@ -6,7 +6,7 @@ set -ex
 # project vars
 account=u2023015
 #partition=rbx
-partition=core
+partition=main
 mail=shruti.choudhary@slu.se
 
 # Variables
