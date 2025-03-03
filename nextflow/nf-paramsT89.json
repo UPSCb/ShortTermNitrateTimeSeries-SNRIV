@@ -1,9 +1,9 @@
 {
     "input": "/mnt/picea/home/delhomme/Git/ShortTermNitrateTimeSeries-SNRIV/doc/sample_sheet.csv",
     "outdir": "data",
-    "fasta": "/mnt/reference/Populus-tremula/v2.2/fasta/Potra02_genome.fasta.gz",
-    "gff": "/mnt/reference/Populus-tremula/v2.2/gff/Potra02_genes.gff",
-    "transcript_fasta": "/mnt/reference/Populus-tremula/v2.2/fasta/Potra02_transcripts.fasta.gz",
+    "fasta": "/mnt/reference/Populus-tremula_X_Populus-tremuloides/v0.1/fasta/Potrx01-genome.fa.gz",
+    "gff": "/mnt/reference/Populus-tremula_X_Populus-tremuloides/v1.0.1/gff3/Potrx01_v1.0.1_gene-wo-introns.gff",
+    "transcript_fasta": "/mnt/reference/Populus-tremula_X_Populus-tremuloides/v1.0.1/fasta/Potrx01-mRNA.fa.gz",
     "remove_ribo_rna": true,
     "pseudo_aligner": "salmon",
     "extra_salmon_quant_args": "--dumpEq --numGibbsSamples 30 --gcBias --seqBias --posBias",
