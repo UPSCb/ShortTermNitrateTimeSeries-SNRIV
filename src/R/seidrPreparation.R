@@ -22,7 +22,7 @@ source(here("UPSCb-common/src/R/featureSelection.R"))
 #'  CHANGEME is the variance stabilised data, where the transformation was done taking the
 #'  model into account (_i.e._ `blind=FALSE`)
 #' ```
-load(here("analysis/DE/vst-noNA.rda"))
+load(here("data/analysis/DE/vst-noNA.rda"))
 
 vst <- as_tibble(vst_subset, rownames="ID") %>% 
   column_to_rownames("ID")
