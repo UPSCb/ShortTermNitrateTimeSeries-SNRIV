@@ -6,6 +6,7 @@ Hybrid aspen was grown under controlled nitrogen conditions. These trees were tr
 ## Setup
 ```bash
 ln -s /mnt/picea/projects/aspseq/htuominen/ShortTermNitrateTimeSeries-SNRIV data
+ln -s /mnt/picea/storage/singularity/ .
 ```
 
 

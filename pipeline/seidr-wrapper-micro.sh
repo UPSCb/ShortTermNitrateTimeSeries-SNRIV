@@ -17,15 +17,15 @@ correlationNCPUs=20
 inference=(aracne clr genie3 llr-ensemble narromi pcor pearson plsnet spearman tigress)
 
 run=(
-  [0]=1
-  [1]=1
+  [0]=0
+  [1]=0
   [2]=1
   [3]=1
   [4]=1
-  [5]=1
-  [6]=1
+  [5]=0
+  [6]=0
   [7]=1
-  [8]=1
+  [8]=0
   [9]=1)
 
 # 28 workers on 1 nodes (kk has 28 per node) - setting -n 2 -c 14 (14 cores on 2 nodes, results in the same)
@@ -41,21 +41,21 @@ arguments=(
   [6]="-n $correlationNCPUs -t 12:00:00"
   [7]=$default
   [8]="-n $correlationNCPUs -t 12:00:00"
-  [9]="-n 1 -c 46 -t 4-00:00:00")
+  [9]="-n 1 -c 46 -t 2-00:00:00")
 
 #parallel="-O "'$SLURM_CPUS_PER_TASK'
 parallel="-O $correlationNCPUs"
 command=(
   [0]="mi -m ARACNE -M $resultDir/mi/mi.tsv "$parallel
   [1]="mi -m CLR -M $resultDir/mi/mi.tsv "$parallel
-  [2]="genie3 -O 42"
+  [2]="genie3 -O 46"
   [3]="llr-ensemble "$parallel
   [4]="narromi "$parallel
   [5]="pcor"
   [6]="correlation -m pearson"
   [7]="plsnet "$parallel
   [8]="correlation -m spearman"
-  [9]="tigress -O 42")
+  [9]="tigress -O 46")
 
 # usage
 USAGETXT=\
@@ -131,18 +131,18 @@ optionB=(
 # Set the number of OMP threads
 # default to 1
 # set to -n (number of cores for pearson, spearman, and pcor
-default=
+default=$correlationNCPUs
 ompThread=(
   [0]=$default
   [1]=$default
-  [2]=$default
+  [2]=46
   [3]=$default
   [4]=$default
   [5]=$correlationNCPUs
   [6]=$correlationNCPUs
   [7]=$default
   [8]=$correlationNCPUs
-  [9]=$default)
+  [9]=46)
 
 # Set dependencies
 # Both ARACNE and CLR calculate the RAW MI
@@ -170,7 +170,7 @@ for ((i=0;i<len;i++)); do
 	    if [ ${#optionB[$i]} -eq 0 ]; then
 	      echo "$singularity ${command[$i]} ${optionB[$i]} -i $2 -g $3 -o $resultDir/$inf/$inf.tsv" >> $resultDir/$inf/$inf.sh
 	    else
-	      echo "srun $singularity ${command[$i]} ${optionB[$i]} -i $2 -g $3 -o $resultDir/$inf/$inf.tsv --save-resume $resultDir/$inf/$inf.xml" >> $resultDir/$inf/$inf.sh
+	      echo "$singularity ${command[$i]} ${optionB[$i]} -i $2 -g $3 -o $resultDir/$inf/$inf.tsv --save-resume $resultDir/$inf/$inf.xml" >> $resultDir/$inf/$inf.sh
       fi
       
       # Handle dependencies
