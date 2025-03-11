@@ -17,7 +17,7 @@ source ~/Git/ShortTermNitrateTimeSeries-SNRIV/UPSCb-common/src/bash/functions.sh
 inference=(aracne clr genie3 llr-ensemble mi narromi pcor pearson plsnet spearman tigress)
 
 # additional parameters (elnet is done iteratively, so the format is not the expected one: a matrix, rather an edge list
-arguments=([2]="-f el" [4]="-o results/llr-ensemble/llr-ensemble.sf")
+arguments=([3]="-o results/llr-ensemble/llr-ensemble.sf")
 CPUs=4
 MEM=64G
 Time=1-00:00:00
