@@ -7,7 +7,7 @@ set -ex
 account=u2024010
 
 # singularity container
-singularity=$(realpath ~/Git/ShortTermNitrateTimeSeries-SNRIV/singularity/seidr_0.14.2.sif)
+singularity=$(/mnt/picea/storage/singularity/seidr_0.14.2.sif)
 pyscript=$(realpath ~/Git/ShortTermNitrateTimeSeries-SNRIV/src/python/generate_import_script.py)
 
 # source helpers
