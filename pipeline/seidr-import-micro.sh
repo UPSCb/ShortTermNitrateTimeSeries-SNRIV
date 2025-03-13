@@ -11,7 +11,7 @@ singularity=$(/mnt/picea/storage/singularity/seidr_0.14.2.sif)
 pyscript=$(realpath ~/Git/ShortTermNitrateTimeSeries-SNRIV/src/python/generate_import_script.py)
 
 # source helpers
-source ~/Git/ShortTermNitrateTimeSeries-SNRIV/UPSCb-common/src/bash/functions.sh
+source ${SLURM_SUBMIT_DIR:-$(pwd)}/UPSCb-common/src/bash/functions.sh
 
 # Variables
 inference=(aracne clr genie3 llr-ensemble mi narromi pcor pearson plsnet spearman tigress)

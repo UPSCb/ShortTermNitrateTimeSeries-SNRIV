@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/bin/bash -l 
 #SBATCH -A u2024010
 #SBATCH -t 12:00:00
 #SBATCH -n 28
@@ -25,7 +25,7 @@ USAGETXT=\
 CPU=28
 
 # source
-source ~/Git/ShortTermNitrateTimeSeries-SNRIV/UPSCb-common/src/bash/functions.sh
+source ${SLURM_SUBMIT_DIR:-$(pwd)}/UPSCb-common/src/bash/functions.sh
 
 # singularity container
 singularity="/mnt/picea/storage/singularity/seidr_0.14.2.sif"

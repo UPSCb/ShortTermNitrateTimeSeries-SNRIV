@@ -1,10 +1,7 @@
 #!/bin/bash
-#SBATCH -A u2022003
 #SBATCH -t 12:00:00
-#SBATCH -n 28
-#SBATCH -o data/seidr/results/backbone/backbone.out
-#SBATCH -e data/seidr/results/backbone/backbone.err
-#SBATCH -J backbone
+#SBATCH -n 2
+#SBATCH --partition main
 
 set -ex
 
@@ -14,8 +11,9 @@ set -ex
 # sbatch -n 1 -c 1 OMP_NUM_THREADS=1 seidr backbone -O 1
 CPU=2
 
+
 # helper functions
-source ../UPSCb-common/src/bash/functions.sh
+source ~/Git/ShortTermNitrateTimeSeries-SNRIV/UPSCb-common/src/bash/functions.sh
 
 # usage
 USAGETXT=\
@@ -27,24 +25,23 @@ USAGETXT=\
 "
 
 # sanity
-isExec seidr
-if [ $? -ne 0 ]; then
-  abort "seidr is not available. Install it, or load the module"
+
+if [ $# -ne 4 ]; then
+  abort "This script expects 4 arguments"
 fi
 
-if [ $# -ne 3 ]; then
-  abort "This script expects 3 arguments"
+if [ ! -f $2 ]; then
+  abort "The second argument needs to be an existing file"
+fi
+
+if [ ! -d $(dirname $4) ]; then
+  abort "The fourth argument directory needs to exist"
 fi
 
 if [ ! -f $1 ]; then
-  abort "The first argument needs to be an existing file"
+  abort "The first argument needs to be an existing singularity container"
 fi
-
-if [ ! -d $(dirname $3) ]; then
-  abort "The third argument directory needs to exist"
-fi
-
 # run
 export OMP_NUM_THREADS=$CPU
-seidr backbone -F $2 -o $3 $1
+singularity exec -B /mnt:/mnt $1 seidr backbone -F $3 -o $4 $2
 
