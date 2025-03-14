@@ -1,11 +1,11 @@
 #!/bin/bash -l
 
-account=u2024010
+account=u2022003
 
 
 # process the argument
-pgs=CHANGEME
-ngs=CHANGEME
+pgs=/mnt/reference/goldStandard/Potra02_KEGG-based-positive-gold-standard.tsv
+ngs=/mnt/reference/goldStandard/Potra02_KEGG-based-negative-gold-standard.tsv
 # example: 
 # pgs=$(realpath ../goldStandard/Picea-abies_KEGG-based-positive-gold-standard.tsv)
 # ngs=$(realpath ../goldStandard/Picea-abies_KEGG-based-negative-gold-standard.tsv)
