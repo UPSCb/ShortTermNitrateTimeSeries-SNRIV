@@ -1,5 +1,5 @@
 #!/bin/bash -l 
-#SBATCH -A u2024010
+#SBATCH -A u2022003
 #SBATCH -t 12:00:00
 #SBATCH -n 28
 #SBATCH -o data/seidr/results/aggregate/aggregate.out
