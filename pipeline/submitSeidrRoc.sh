@@ -39,6 +39,6 @@ for f in $(find $indir -name "*.sf"); do
   # Rerun seidr roc using no negative edges information
   sbatch -A $account \
   -o $out/${fnam}_roc_NoNegative.out -e $out/${fnam}_roc_NoNegative.err \
-  pipeline/runSeidrRoc_NoNegative.sh $singularity $f $pgs \
+  pipeline/runSeidrRocNoNegative.sh $singularity $f $pgs \
   $out/${fnam}_roc_NoNegative.tsv
 done
