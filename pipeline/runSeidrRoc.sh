@@ -65,4 +65,4 @@ if [ ! -d $(dirname $5) ]; then
 fi
 
 # run
-singularity exec -B /mnt:/mnt $1 seidr roc -n $2 -g $3 -x $4 $OPTIONS > $5
+singularity exec -B /mnt:/mnt $1 seidr roc -f -n $2 -g $3 -x $4 $OPTIONS > $5
