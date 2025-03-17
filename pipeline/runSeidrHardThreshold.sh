@@ -38,5 +38,5 @@ fi
 
 # run
 export OMP_NUM_THREADS=$CPU
-singularity exec -B /mnt:/mnt $1 seidr threshold --in-file $2 -m 0.1 -M 0.9 -o $3
+singularity exec -B /mnt:/mnt $1 seidr threshold -f --in-file $2 -m 0.1 -M 0.9 -o $3
 

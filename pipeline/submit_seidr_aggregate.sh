@@ -4,5 +4,5 @@ mkdir -p data/seidr/results/aggregate
 
 
 paths=$(realpath data/seidr/results/*/*.sf)
-sbatch pipeline/seidr-aggegate-micro.sh data/seidr/results/aggregate $paths
+sbatch pipeline/seidr-aggegate-micro.sh -f data/seidr/results/aggregate $paths
 

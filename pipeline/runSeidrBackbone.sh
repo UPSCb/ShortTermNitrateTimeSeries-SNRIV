@@ -43,5 +43,5 @@ if [ ! -f $1 ]; then
 fi
 # run
 export OMP_NUM_THREADS=$CPU
-singularity exec -B /mnt:/mnt $1 seidr backbone -F $3 -o $4 $2
+singularity exec -B /mnt:/mnt $1 seidr backbone -f -F $3 -o $4 $2
 
