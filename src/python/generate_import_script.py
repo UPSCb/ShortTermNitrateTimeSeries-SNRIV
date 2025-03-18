@@ -79,7 +79,7 @@ narromi = {
   'n': 'NARROMI',
   'o': 'narromi.sf'
 }
-
+ 
 svm = {
   'r': True,
   'z': True,
@@ -109,7 +109,7 @@ pearson = {
   'n': 'PEARSON',
   'o': 'pearson.sf'
 }
-
+ 
 spearman = {
   'r': True,
   'z': True,
@@ -291,10 +291,6 @@ class scriptGenerator(object):
         gen = cmdGenerator(args, tomsimilarity)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('mi', args.input):
-        gen = cmdGenerator(args, mi)
-        for arg in gen.get():
-          self.cmd.append(arg)
       elif re.search('svm', args.input, flags=re.IGNORECASE):
         gen = cmdGenerator(args, svm)
         for arg in gen.get():
@@ -317,6 +313,10 @@ class scriptGenerator(object):
           self.cmd.append(arg)
       elif re.search('tigress', args.input, flags=re.IGNORECASE):
         gen = cmdGenerator(args, tigress)
+        for arg in gen.get():
+          self.cmd.append(arg)
+      elif re.search('mi', args.input, flags=re.IGNORECASE):
+        gen = cmdGenerator(args, mi)
         for arg in gen.get():
           self.cmd.append(arg)
       else:

@@ -64,7 +64,7 @@ plotRoc <- function(f){
 #' ```{R CHANGEME1, echo=FALSE, eval=FALSE}
 #' Change the path to the aggregated ROC results, if required. That ROC file must have been created using seidr roc -a option
 #' ```
-res <- plotRoc(here("data/seidr/results/exampleRoc//backbone-10-percent_roc_WithNegative.tsv"))
+res <- plotRoc(here("data/seidr/results/ResRoc/backbone-10-percent_roc_WithNegative.tsv"))
 
 #' ### Stats of the gold standard analysis
 pander(res)
