@@ -1,6 +1,7 @@
 #!/bin/bash -l
 
-account=u2024010
+account=u2022003
+# account=u2024010
 
 # process the argument
 pgs=/mnt/reference/goldStandard/Potra02_KEGG-based-positive-gold-standard.tsv
