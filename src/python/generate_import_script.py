@@ -163,6 +163,7 @@ class inputCtl(object):
       raise FileNotFoundError(args.genes)
 
 
+    RelPath = os.path.basename(args.input)
     args.input = os.path.abspath(args.input)
     args.genes = os.path.abspath(args.genes)
     args.exec = f"singularity exec -B /mnt:/mnt {sys.argv[1]} seidr"
@@ -263,59 +264,59 @@ class scriptGenerator(object):
     print('##############################################################\n')
 
     if args.algorithm == 'auto':
-      if re.search('aracne', args.input, flags=re.IGNORECASE):
+      if re.search('aracne', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, aracne)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('clr', args.input, flags=re.IGNORECASE):
+      elif re.search('clr', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, clr)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('elnet', args.input, flags=re.IGNORECASE):
+      elif re.search('elnet', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, elnet)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('genie3', args.input, flags=re.IGNORECASE):
+      elif re.search('genie3', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, genie3)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('llr', args.input, flags=re.IGNORECASE):
+      elif re.search('llr', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, llr)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('narromi', args.input, flags=re.IGNORECASE):
+      elif re.search('narromi', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, narromi)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('tomsimilarity', args.input, flags=re.IGNORECASE):
+      elif re.search('tomsimilarity', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, tomsimilarity)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('svm', args.input, flags=re.IGNORECASE):
+      elif re.search('svm', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, svm)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('pearson', args.input, flags=re.IGNORECASE):
+      elif re.search('pearson', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, pearson)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('spearman', args.input, flags=re.IGNORECASE):
+      elif re.search('spearman', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, spearman)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('pcor', args.input, flags=re.IGNORECASE):
+      elif re.search('pcor', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, pcor)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('plsnet', args.input, flags=re.IGNORECASE):
+      elif re.search('plsnet', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, plsnet)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('tigress', args.input, flags=re.IGNORECASE):
+      elif re.search('tigress', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, tigress)
         for arg in gen.get():
           self.cmd.append(arg)
-      elif re.search('mi', args.input, flags=re.IGNORECASE):
+      elif re.search('mi', RelPath, flags=re.IGNORECASE):
         gen = cmdGenerator(args, mi)
         for arg in gen.get():
           self.cmd.append(arg)
