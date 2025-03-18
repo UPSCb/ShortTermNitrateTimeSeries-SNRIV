@@ -13,7 +13,7 @@ CPU=2
 
 
 # helper functions
-source ~/Git/ShortTermNitrateTimeSeries-SNRIV/UPSCb-common/src/bash/functions.sh
+source /mnt/picea/home/schoudhary/shruti/ShortTermNitrateTimeSeries-SNRIV/UPSCb-common/src/bash/functions.sh
 
 # usage
 USAGETXT=\

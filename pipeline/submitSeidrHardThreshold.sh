@@ -2,7 +2,7 @@
 
 #singularity container
 singularity=$(realpath singularity/seidr_0.14.2.sif)
-account="u2024010"
+account="u2022003"
 
 # process the argument
 input="/mnt/picea/projects/aspseq/htuominen/ShortTermNitrateTimeSeries-SNRIV/seidr/results/aggregate/aggregated.sf"
