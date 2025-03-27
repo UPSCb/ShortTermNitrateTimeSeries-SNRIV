@@ -118,7 +118,9 @@ paucs <- aucs * t(t(gsNum) / colMaxs(gsNum))
 pander(paucs)
 
 heatmap.2(paucs,trace="none",col=hpal,margins=c(7.1,7.1),Colv=FALSE,dendrogram="row")
+heatmap.2(paucs,trace="none",col=hpal,margins=c(7.1,7.1))
 
+#WithNegative data seem to suggest using as threshold backbone 9 or 5.
 
 # Now repeat everything with NoNegatives.
 res <- plotRoc(here("data/seidr/results/ResRoc/aggregated_roc_NoNegative.tsv"))
@@ -169,11 +171,11 @@ paucs <- aucs * t(t(gsNum) / colMaxs(gsNum))
 pander(paucs)
 
 heatmap.2(paucs,trace="none",col=hpal,margins=c(7.1,7.1),Colv=FALSE,dendrogram="row")
-
+heatmap.2(paucs,trace="none",col=hpal,margins=c(7.1,7.1))
 
 
 #' # Conclusion
-#' CHANGEME for some conclusion
+#' WIthNegative we would use 9 or 5. With no negative they all look very similar so we would go with 1, which is less stringent
 #' ```{r empty, eval=FALSE,echo=FALSE}
 #' ```
 #' # Session Info

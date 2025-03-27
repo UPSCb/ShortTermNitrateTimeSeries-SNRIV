@@ -4,7 +4,7 @@ library(ggplot2)
 library(here)
 
 # Read in the edge list you created:
-edgelist <- read.table("data/seidr/results/tigress/tigress.tsv", header = TRUE, sep = "\t")
+edgelist <- read.table("data/seidr/results/backbone/backbone-9-percent.tsv", header = TRUE, sep = "\t")
 
 edgelist_standardized <- edgelist %>%
   rowwise() %>%
