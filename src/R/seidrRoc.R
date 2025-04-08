@@ -70,7 +70,7 @@ res <- plotRoc(here("data/seidr/results/ResRoc/aggregated_roc_WithNegative.tsv")
 pander(res)
 
 #' ## Backbone
-#' ```{R CHANGEME1, echo=FALSE, eval=FALSE}
+#' ```{R CHANGEME2, echo=FALSE, eval=FALSE}
 #' Change the path to the backbone ROC results directory as well as the file matching patter,if required. 
 #' These ROC files must have been created using seidr roc -a option
 #' Doing the analysis only with the WithNegative files, maybe repeat it for the NoNegative
@@ -84,7 +84,7 @@ resb <- lapply(files,plotRoc)
 pander(resb)
 
 # Hard threshold
-reshd <- plotRoc(here("data/seidr/results/ResRoc/HardThreshold_roc_WithNegative.tsv"))
+reshd <- plotRoc(here("data/seidr/results/ResRoc/filtered_0444_roc_WithNegative.tsv"))
 
 #' ### Stats of the gold standard analysis
 pander(reshd)
@@ -115,6 +115,7 @@ heatmap.2(aucs,trace="none",col=hpal,margins=c(7.1,7.1),Colv=FALSE,dendrogram="r
 #' The rationale here is to check the effect of a limited number of GS on the 
 #' AUC calculation
 resb$aggregated=res
+resb$hardthres=reshd
 
 gsNum <- lapply(resb,select,c("ALGO","TP","FP")) %>%
   enframe %>% unnest(cols=c("value")) %>% 
@@ -145,9 +146,18 @@ resb <- lapply(files,plotRoc)
 #' ### Stats of the gold standard (GS) analysis
 pander(resb)
 
+# Hard threshold
+reshd <- plotRoc(here("data/seidr/results/ResRoc/filtered_0444_roc_NoNegative.tsv"))
+
+#' ### Stats of the gold standard analysis
+pander(reshd)
+
+
+
 #' # Summary
 #' Report all AUCs
-aucs <- c(lapply(resb,select,c("ALGO","AUC")),aggregated=list(select(res,c("ALGO","AUC")))) %>% 
+aucs <- c(lapply(resb,select,c("ALGO","AUC")),aggregated=list(select(res,c("ALGO","AUC"))),
+          HardThreshold=list(select(reshd,c("ALGO","AUC")))) %>% 
   enframe %>% unnest(cols=c("value")) %>% pivot_wider(names_from=name,values_from=AUC) %>% 
   column_to_rownames("ALGO") %>% as.matrix()
 
@@ -168,6 +178,7 @@ heatmap.2(aucs,trace="none",col=hpal,margins=c(7.1,7.1),Colv=FALSE,dendrogram="r
 #' The rationale here is to check the effect of a limited number of GS on the 
 #' AUC calculation
 resb$aggregated=res
+resb$hardthres=reshd
 
 gsNum <- lapply(resb,select,c("ALGO","TP","FP")) %>%
   enframe %>% unnest(cols=c("value")) %>% 
