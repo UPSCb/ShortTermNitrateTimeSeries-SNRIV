@@ -46,6 +46,22 @@ filter_data <- function(file_path) {
   # Print the number of removed rows
   print(paste("The number of removed edges is :", nrow(data) - nrow(data_filtered)))
   
+  # Get unique values from Source_Cluster and sort them
+  unique_values <- sort(unique(data_filtered$Source_Cluster))
+  
+  # Create a mapping from old values to new values
+  mapping <- setNames(seq_along(unique_values), unique_values)
+  
+  mapping <- c("-1" = -1, mapping)
+  
+  # Apply the mapping to Source_Cluster, Cluster and Target_Cluster columns
+  data_filtered <- data_filtered %>%
+    mutate(
+      Source_Cluster = paste0("Cluster", mapping[as.character(Source_Cluster)]),
+      Cluster = paste0("Cluster",mapping[as.character(Cluster)]),
+      Target_Cluster = paste0("Cluster",mapping[as.character(Target_Cluster)])
+    )
+  
   return(data_filtered)
 }
 
@@ -54,6 +70,8 @@ data_1 <- filter_data(here("data/seidr/clustering/backbone-1-percent.tsv"))
 data_5 <- filter_data(here("data/seidr/clustering/backbone-5-percent.tsv"))  
 
 data_9 <- filter_data(here("data/seidr/clustering/backbone-9-percent.tsv"))  
+
+
 
 data_1 %>%
   count(Cluster) %>% nrow()
@@ -91,37 +109,46 @@ write_tsv(data_9, here("data/seidr/clustering/filtered_backbone-9-percent.tsv"))
 library(WGCNA)
 load(here("data/analysis/DE/vst-aware.rda"))
 
-temp_Source <- data_9 %>% select(Source, Source_Cluster) %>% distinct() %>% 
-  dplyr::rename(Gene = Source,
-                Cluster = Source_Cluster)
+get_eigengenes <- function(vst, data) {
+  temp_Source <- data %>% select(Source, Source_Cluster) %>% distinct() %>% 
+    dplyr::rename(Gene = Source, Cluster = Source_Cluster)
+  
+  temp_Target <- data %>% select(Target, Target_Cluster) %>% distinct() %>% 
+    dplyr::rename(Gene = Target, Cluster = Target_Cluster)
+  
+  temp <- bind_rows(temp_Source, temp_Target) %>% distinct()
+  
+  cluster_color <- temp %>% select(Cluster) %>% distinct()
+  cluster_color$Color <- colorRampPalette(RColorBrewer::brewer.pal(11, "RdYlGn"))(nrow(cluster_color))
+  
+  temp <- temp %>% left_join(cluster_color, by = "Cluster")
+  
+  colors <- temp$Color
+  names(colors) <- temp$Gene
+  
+  vst_filtered <- vst[rownames(vst) %in% temp$Gene, ]
+  
+  wgcna <- moduleEigengenes(t(vst_filtered), colors)
+  
+  eigengenes <- t(wgcna$eigengenes)
+  rownames(eigengenes) <- gsub("^ME", "", rownames(eigengenes))
+  
+  rownames(eigengenes) <- cluster_color$Cluster[match(rownames(eigengenes), cluster_color$Color)]
+  
+  return(eigengenes)
+}
 
-temp_Target <- data_9 %>% select(Target, Target_Cluster) %>% distinct() %>% 
-  dplyr::rename(Gene = Target,
-                Cluster = Target_Cluster)
+eigengenes_9 <- get_eigengenes(vst,data_9) %>% 
+  as_tibble(rownames="Cluster")
 
-temp <- bind_rows(temp_Source, temp_Target) %>% distinct()
+write_tsv(eigengenes_9, here("data/seidr/clustering/filtered_backbone-9-percent_eigengenes.tsv"))
 
-cluster_color <- temp %>% select(Cluster) %>% distinct()
-cluster_color$Color <- colorRampPalette(RColorBrewer::brewer.pal(11,"RdYlGn"))(nrow(cluster_color))
+pheatmap(eigengenes_9)
 
-temp <- temp %>% left_join(cluster_color, by= "Cluster")
+eigengenes_5 <- get_eigengenes(vst,data_5) %>% 
+  as_tibble(rownames="Cluster")
 
-colors <- temp$Color
-names(colors) <- temp$Gene
-
-vst_filtered <- vst[rownames(vst) %in% temp$Gene,]
-
-
-wgcna <- moduleEigengenes(t(vst_filtered), colors)
-
-eigengenes <- t(wgcna$eigengenes)
-rownames(eigengenes) <- gsub("^ME", "", rownames(eigengenes))
-
-rownames(eigengenes) <- cluster_color$Cluster[match(rownames(eigengenes),cluster_color$Color)]
-
-pheatmap(eigengenes)
-
-
+write_tsv(eigengenes_5, here("data/seidr/clustering/filtered_backbone-5-percent_eigengenes.tsv"))
 
 # Check transcription factors of past interest because of obsession
 
