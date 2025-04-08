@@ -83,9 +83,18 @@ resb <- lapply(files,plotRoc)
 #' ### Stats of the gold standard (GS) analysis
 pander(resb)
 
+# Hard threshold
+reshd <- plotRoc(here("data/seidr/results/ResRoc/HardThreshold_roc_WithNegative.tsv"))
+
+#' ### Stats of the gold standard analysis
+pander(reshd)
+
+
+
 #' # Summary
 #' Report all AUCs
-aucs <- c(lapply(resb,select,c("ALGO","AUC")),aggregated=list(select(res,c("ALGO","AUC")))) %>% 
+aucs <- c(lapply(resb,select,c("ALGO","AUC")),aggregated=list(select(res,c("ALGO","AUC"))),
+          HardThreshold=list(select(reshd,c("ALGO","AUC")))) %>% 
   enframe %>% unnest(cols=c("value")) %>% pivot_wider(names_from=name,values_from=AUC) %>% 
   column_to_rownames("ALGO") %>% as.matrix()
 

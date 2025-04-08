@@ -87,6 +87,42 @@ write_tsv(data_5, here("data/seidr/clustering/filtered_backbone-5-percent.tsv"))
 write_tsv(data_9, here("data/seidr/clustering/filtered_backbone-9-percent.tsv"))
 
 
+# Calculate eigenegenes
+library(WGCNA)
+load(here("data/analysis/DE/vst-aware.rda"))
+
+temp_Source <- data_9 %>% select(Source, Source_Cluster) %>% distinct() %>% 
+  dplyr::rename(Gene = Source,
+                Cluster = Source_Cluster)
+
+temp_Target <- data_9 %>% select(Target, Target_Cluster) %>% distinct() %>% 
+  dplyr::rename(Gene = Target,
+                Cluster = Target_Cluster)
+
+temp <- bind_rows(temp_Source, temp_Target) %>% distinct()
+
+cluster_color <- temp %>% select(Cluster) %>% distinct()
+cluster_color$Color <- colorRampPalette(RColorBrewer::brewer.pal(11,"RdYlGn"))(nrow(cluster_color))
+
+temp <- temp %>% left_join(cluster_color, by= "Cluster")
+
+colors <- temp$Color
+names(colors) <- temp$Gene
+
+vst_filtered <- vst[rownames(vst) %in% temp$Gene,]
+
+
+wgcna <- moduleEigengenes(t(vst_filtered), colors)
+
+eigengenes <- t(wgcna$eigengenes)
+rownames(eigengenes) <- gsub("^ME", "", rownames(eigengenes))
+
+rownames(eigengenes) <- cluster_color$Cluster[match(rownames(eigengenes),cluster_color$Color)]
+
+pheatmap(eigengenes)
+
+
+
 # Check transcription factors of past interest because of obsession
 
 interest <- c("Potra2n15c29002", "Potra2n12c23983")
