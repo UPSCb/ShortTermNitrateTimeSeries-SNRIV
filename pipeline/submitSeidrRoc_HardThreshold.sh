@@ -1,0 +1,32 @@
+#!/bin/bash -l
+
+# account=u2022003
+# account=u2024010
+account=u2023011
+
+# process the argument
+pgs=/mnt/reference/goldStandard/Potra02_KEGG-based-positive-gold-standard.tsv
+ngs=/mnt/reference/goldStandard/Potra02_KEGG-based-negative-gold-standard.tsv
+
+ht=$(realpath data/seidr/results/HardThreshold/filtered_0444.sf)
+indir=$(realpath data/seidr/results/backbone)
+out=$(realpath data/seidr/results/ResRoc)
+singularity=/mnt/picea/storage/singularity/seidr_0.14.2.sif
+
+# find the network files
+# Running with the negative gold standard
+f=$ht
+
+fnam=$(basename ${f/.sf/})
+
+# run the roc on all
+sbatch -A $account \
+-o $out/${fnam}_roc_WithNegative.out -e $out/${fnam}_roc_WithNegative.err \
+pipeline/runSeidrRoc.sh $singularity $f $pgs $ngs \
+$out/${fnam}_roc_WithNegative.tsv
+
+# Rerun seidr roc using no negative edges information
+sbatch -A $account \
+-o $out/${fnam}_roc_NoNegative.out -e $out/${fnam}_roc_NoNegative.err \
+pipeline/runSeidrRocNoNegative.sh $singularity $f $pgs \
+$out/${fnam}_roc_NoNegative.tsv
