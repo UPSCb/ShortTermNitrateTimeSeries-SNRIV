@@ -143,7 +143,7 @@ eigengenes_9 <- get_eigengenes(vst,data_9) %>%
 
 write_tsv(eigengenes_9, here("data/seidr/clustering/filtered_backbone-9-percent_eigengenes.tsv"))
 
-pheatmap(eigengenes_9)
+pheatmap(column_to_rownames(eigengenes_9,"Cluster"))
 
 eigengenes_5 <- get_eigengenes(vst,data_5) %>% 
   as_tibble(rownames="Cluster")
