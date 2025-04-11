@@ -15,19 +15,25 @@ output_edgelist <- args[2]
 # edgelist <- read.table("data/seidr/results/backbone/backbone-9-percent.tsv", header = TRUE, sep = "\t")
 edgelist <- read.table(input_edgelist, header = TRUE, sep = "\t")
 
-edgelist_standardized <- edgelist %>%
-  rowwise() %>%
-  mutate(
-    Source = min(Source, Target),
-    Target = max(Source, Target)
-  ) %>%
-  ungroup()
 
-# Remove duplicate rows
-edgelist_unique <- edgelist_standardized %>%
-  distinct()
-
-edgelist <- edgelist_unique
+# edgelist$NewSource <- edgelist$Source
+# edgelist$NewTarget <- edgelist$Target
+# 
+# edgelist_standardized <- edgelist %>%
+#   rowwise() %>%
+#   mutate(
+#     Source = min(NewSource, NewTarget),
+#     Target = min(NewSource, NewTarget)
+#   ) %>%
+#   ungroup() %>% 
+#   select(-NewSource, -NewTarget)
+# 
+# 
+# # Remove duplicate rows
+# edgelist_unique <- edgelist_standardized %>%
+#   distinct()
+# 
+# edgelist <- edgelist_unique
 # The algorithm below produces a result based on a "seed" in the background. To maintain reproducibility we
 # can set a seed so we get the exact same result for each dataset every time we run it. If we do not do this
 # the seed will be randomly generate and the results could slightly vary each run.
