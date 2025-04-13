@@ -100,12 +100,19 @@ data %>%
 
 # Backbone 5 has more genes (17782), but a high numbr of clusters (155)
 # Backbone 9 has less genes (10962), but a low numbr of clusters (18)
+# with the updated script, backbone 1 has 27651 genes in 104 clusters,
+# data5 has 28716 genes in 14 clusters
+# data9 has 28864 genes in 10 clusters
 
+# Removed the previous filtered files for bb5 and bb9, couldn't overwrite
 write_tsv(data_5, here("data/seidr/clustering/filtered_backbone-5-percent.tsv"))
 write_tsv(data_9, here("data/seidr/clustering/filtered_backbone-9-percent.tsv"))
 
+write_tsv(data_1, here("data/seidr/clustering/filtered_backbone-1-percent.tsv"))
+
 
 # Calculate eigenegenes
+library(pheatmap)
 library(WGCNA)
 load(here("data/analysis/DE/vst-aware.rda"))
 
@@ -149,6 +156,11 @@ eigengenes_5 <- get_eigengenes(vst,data_5) %>%
   as_tibble(rownames="Cluster")
 
 write_tsv(eigengenes_5, here("data/seidr/clustering/filtered_backbone-5-percent_eigengenes.tsv"))
+
+eigengenes_1 <- get_eigengenes(vst,data_1) %>% 
+  as_tibble(rownames="Cluster")
+
+write_tsv(eigengenes_1, here("data/seidr/clustering/filtered_backbone-1-percent_eigengenes.tsv"))
 
 # Check transcription factors of past interest because of obsession
 
