@@ -7,7 +7,7 @@ library(purrr)
 library(tibble)
 library(readr)
  
-bb9 <- read_tsv(here("data/seidr/clustering/filtered_backbone-9-percent.tsv"),
+bb9 <- read_tsv(here("data/seidr/clustering/filtered_backbone-9-percentv2.tsv"),
                col_names=T,col_types=cols(.default=col_character()),
                show_col_types=FALSE)
 
@@ -18,11 +18,11 @@ bb9 <- bb9 %>%
 # have been already filtered out before, still run this
 bb9 <- bb9 %>% filter(!is.na(irp_score))
 
-# d.graf <- graph.edgelist(as.matrix(bb9[bb9$Type=="Directed",1:2]),directed=TRUE)
+d.graf <- graph.edgelist(as.matrix(bb9[bb9$Type=="Directed",1:2]),directed=TRUE)
 
-# u1.graf <- graph.edgelist(as.matrix(bb9[bb9$Type=="Undirected",1:2]),directed=TRUE)
-# u2.graf <- graph.edgelist(as.matrix(bb9[bb9$Type=="Undirected",2:1]),directed=TRUE)
-# g <- union(d.graf,u1.graf,u2.graf)
+u1.graf <- graph.edgelist(as.matrix(bb9[bb9$Type=="Undirected",1:2]),directed=TRUE)
+u2.graf <- graph.edgelist(as.matrix(bb9[bb9$Type=="Undirected",2:1]),directed=TRUE)
+g <- union(d.graf,u1.graf,u2.graf)
 
 g <- graph.edgelist(as.matrix(bb9[bb9$Type=="Directed",1:2]),directed=TRUE)
 
