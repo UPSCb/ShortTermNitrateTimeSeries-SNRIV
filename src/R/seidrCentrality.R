@@ -76,7 +76,7 @@ saveRDS(d,"data/seidr/clustering/nodeMeasures.rds")
 
 # Resrtart R
 # different Timepoint is in separate sheet
-g <- readRDS("/pfs/stor10/users/home/s/shruti/project/ShortTermNitrateTimeSeries-SNRIV/data/seidr/clustering/graph.rds")
+g <- readRDS(here("data/seidr/clustering/graph.rds"))
 
 deg_file <- "data/deg/allDeg.xlsx"
 timepoint_map <- c("S1A_2h" = "2h", "S1B_4h" = "4h", "S1C_8h" = "8h", 
@@ -133,19 +133,31 @@ saveRDS(first_degree_neighbour_genes, "data/seidr/clustering/first_degree_neighb
 
 # list_of_DEGsAndNieghbours_vectors <- map(list_of_DEGs_vectors, ~ extract_firstDegreeNeighbours(.x, g))
 
-deg_neighbor_graph_per_T <- purrr::map(deg_neighbor_graph, ~ unlist(.x))
+deg_neighbor_graph_per_T <- purrr::map(deg_split_list, ~ {
+  neighbors = get_neighbors(c(.x$up$Gene_Id, .x$down$Gene_Id), g)})
 
 
 #' combine all these networks together
-combined_networks <- map(deg_neighbor_graph
-                         Reduce("%u%",deg_neighbors))
+combined_networks <- purrr::map(deg_neighbor_graph_per_T, 
+                         ~ Reduce("%u%",.x))
 
+components(combined_networks[["2h"]])
 #' Look at how many clusters we get and how many nodes are involved
-# clusters(fdn)
+components_report <- purrr::map(combined_networks,
+     ~ igraph::components(.x)
+)
+
+#Check that all networks have a single cluster
+transpose(components_report)$no
+
+#Just check what happens if everything ends up in one network
+AllNeighbours_AllDEGs <- Reduce("%u%",combined_networks)
+
+components(AllNeighbours_AllDEGs)
 
 #' Let's export the data for visualisation
-walk(
-  write_graph(fdn,format = "graphml",file="firstDegreeNeighbour.graphml")
+iwalk(combined_networks,
+      ~ write_graph(.x,format = "graphml",file=here(paste0("data/seidr/clustering/firstDegreeNeighbours_", .y, ".graphml")))
 )
 
 # what criteria is good for hubgenes, page rank?
