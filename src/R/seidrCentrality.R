@@ -7,10 +7,10 @@ library(Publish)
 library(tibble)
 library(readr)
 library(readxl)
- 
-bb9 <- read_tsv(here("data/seidr/clustering/filtered_backbone-9-percentv2.tsv"),
-               col_names=T,col_types=cols(.default=col_character()),
-               show_col_types=FALSE)
+
+bb9 <- read_tsv(here("data/seidr/clustering/filtered_backbone-9-percent.tsv"),
+                col_names=T,col_types=cols(.default=col_character()),
+                show_col_types=FALSE)
 
 bb9 <- bb9 %>%
   separate(irp_score.irp_rank, into = c("irp_score", "irp_rank"), sep = ";", 
@@ -19,21 +19,11 @@ bb9 <- bb9 %>%
 # have been already filtered out before, still run this
 bb9 <- bb9 %>% filter(!is.na(irp_score))
 
-<<<<<<< HEAD
-d.graf <- graph.edgelist(as.matrix(bb9[bb9$Type=="Directed",1:2]),directed=TRUE)
-
-u1.graf <- graph.edgelist(as.matrix(bb9[bb9$Type=="Undirected",1:2]),directed=TRUE)
-u2.graf <- graph.edgelist(as.matrix(bb9[bb9$Type=="Undirected",2:1]),directed=TRUE)
-g <- union(d.graf,u1.graf,u2.graf)
-
-g <- graph.edgelist(as.matrix(bb9[bb9$Type=="Directed",1:2]),directed=TRUE)
-=======
 d.graf <- graph_from_edgelist(as.matrix(bb9[bb9$Type=="Directed",1:2]),directed=TRUE)
 u1.graf <- graph_from_edgelist(as.matrix(bb9[bb9$Type=="Undirected",1:2]),directed=TRUE)
 u2.graf <- graph_from_edgelist(as.matrix(bb9[bb9$Type=="Undirected",2:1]),directed=TRUE)
 g <- igraph::union(d.graf,u1.graf,u2.graf)
 saveRDS(g,"data/seidr/clustering/graph.rds")
->>>>>>> 0d42d0c18705b0b51bde9bcce5ff065f3dd7d60d
 
 pr <- page_rank(g)$vector
 saveRDS(pr,"data/seidr/clustering/pageRank.rds")
@@ -115,7 +105,7 @@ get_neighbors <- function(goi, g) {
 
 deg_neighbor_graph <- purrr::map(deg_split_list, ~ {
   list(up_neighbors = get_neighbors(.x$up$Gene_Id, g),
-    down_neighbors = get_neighbors(.x$down$Gene_Id, g))})
+       down_neighbors = get_neighbors(.x$down$Gene_Id, g))})
 
 first_degree_neighbour_genes <- map(deg_neighbor_graph, function(t) {
   map(t, function(n) {
@@ -143,6 +133,9 @@ saveRDS(first_degree_neighbour_genes, "data/seidr/clustering/first_degree_neighb
 
 # list_of_DEGsAndNieghbours_vectors <- map(list_of_DEGs_vectors, ~ extract_firstDegreeNeighbours(.x, g))
 
+deg_neighbor_graph_per_T <- purrr::map(deg_neighbor_graph, ~ unlist(.x))
+
+
 #' combine all these networks together
 combined_networks <- map(deg_neighbor_graph
                          Reduce("%u%",deg_neighbors))
@@ -152,7 +145,7 @@ combined_networks <- map(deg_neighbor_graph
 
 #' Let's export the data for visualisation
 walk(
-write_graph(fdn,format = "graphml",file="firstDegreeNeighbour.graphml")
+  write_graph(fdn,format = "graphml",file="firstDegreeNeighbour.graphml")
 )
 
 # what criteria is good for hubgenes, page rank?
