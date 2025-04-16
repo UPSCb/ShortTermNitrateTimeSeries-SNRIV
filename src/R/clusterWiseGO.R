@@ -6,9 +6,9 @@ library(tidyr)
 library(tibble)
 library(here)
 
-background <- readLines("data/deg/reducedBackgroundGenes.csv")
+background <- readLines(here("data/analysis/DE/bg.csv"))
 
-mapping <- read.delim("data/seidr/clustering/gene_go.txt", stringsAsFactors = F)
+mapping <- read.delim(here("data/seidr/clustering/gene_go.txt"), stringsAsFactors = F)
 prepAnnot <- function(annot){
   # Remove transcript version suffixes (e.g., .1, .2)
   annot$Sequence.Name <- sub("\\..*$", "", annot$Sequence.Name)
@@ -70,12 +70,12 @@ topGO_combined <- function(set,background,annotation,
   return(bind_rows(lst, .id = "GO category"))
 }
 
+# Go to A, B or C specific GOs
+
 # A. For all the cluster specific genes 
-bb9 <- read.delim("data/seidr/clustering/filtered_backbone-9-percent.tsv", 
+bb9 <- read.delim(here("data/seidr/clustering/filtered_backbone-9-percent.tsv"), 
                   stringsAsFactors = F)
 
-# cluster_genes <- split(c(bb9$Source, bb9$Target), c(bb9$Source_Cluster, bb9$Target_Cluster))
-# res.list <- lapply(cluster_genes, unique)
 bb9_df1 <- bb9 %>% dplyr::select(Source, Source_Cluster) %>% rename(Gene=Source, Cluster=Source_Cluster)
 bb9_df2 <- bb9 %>% dplyr::select(Target, Target_Cluster) %>% rename(Gene=Target, Cluster=Target_Cluster)
 combined_df <- bind_rows(bb9_df1,bb9_df2) %>% distinct()
@@ -88,73 +88,33 @@ for (name in names(cluster_g)) {
 }
 
 res <- Filter(function(x) length(x) > 1, res)
-results <- map(res, ~ topGO_combined(.x, background, goannot, alpha = 0.05, 
+results1 <- map(res, ~ topGO_combined(.x, background, goannot, alpha = 0.05, 
                                      p.adjust = "BH"))
-results <- discard(results, ~ nrow(.x) == 0)
-walk2(results, names(results), ~ write_tsv(.x, file = here(paste0("data/seidr/clustering/GO_cluster/GO-enr_", .y, ".tsv"))))
-saveRDS(results, "data/seidr/clustering/clusterGO.rds")
+results1 <- discard(results1, ~ nrow(.x) == 0)
+
+dir.create("data/seidr/clustering/GO_cluster/")
+walk2(results1, names(results1), ~ write_tsv(.x, file = here(paste0("data/seidr/clustering/GO_cluster/GO-enr_", .y, ".tsv"))))
+saveRDS(results1, "data/seidr/clustering/GO_cluster/clusterGO.rds")
 
 ntop <- 20
 
-for (name in names(results)) {
+for (name in names(results1)) {
   suppressMessages(
-    data <- results[[name]] %>%
+    data <- results1[[name]] %>%
       dplyr::mutate(FDR = ifelse(FDR == "< 1e-30", "1e-30", FDR)) %>%
       dplyr::mutate(scores = -log10(as.numeric(FDR))) %>% 
       dplyr::select(Term, scores))
   data <- data %>% dplyr::arrange(desc(scores)) %>% dplyr::slice(1:ntop)
   data$Term <- factor(data$Term, levels = data$Term[order(data$scores, decreasing = TRUE)])
   
-  p <- ggplot(data, aes(x =Term, y = GeneRatio, color = FDR, size = Count)) +
-    geom_point() + scale_color_gradient(low = "red", high = "blue") +
-    theme_bw() + ylab("GeneRatio") + xlab("") +
-    facet_grid(`GO category` ~ ., scales = "free", space = "free") +
-    ggtitle(paste0(name," GO enrichment")) + coord_flip()
-  
-  plot(p)
-  
-  ggsave(
-    filename = file.path("data/seidr/clustering/GO_cluster/", paste0("GO-enr_", name, ".png")),
-    plot = p, width = 12, height = 8.5)
-}
-
-# B. for the first degree neighbours of degs
-first_degree_neighbour_genes <- load("data/seidr/clustering/first_degree_neighbor_genes.rds")
-res.list <- map(first_degree_neighbour_genes, ~ Filter(function(x) length(x) > 1, .x))
-results <- map(res.list, ~ map(.x, ~ topGO_combined(.x, background, goannot, 
-                                                    alpha = 0.05, 
-                                                    p.adjust = "BH")))
-results <- map(results, ~ discard(.x, ~ nrow(.x) == 0))
-saveRDS(results, "data/seidr/clustering/firstNeighborGO.rds")
-
-ntop <- 20
-
-# p-value in the circles (optional)
-# for (name in names(results)) {
-  for(nei in names(results[[name]])) {
-  suppressMessages(
-    data <- results[[name]][[nei]] %>%
-      dplyr::mutate(FDR = ifelse(FDR == "< 1e-30", "1e-30", FDR)) %>%
-      dplyr::mutate(scores = -log10(as.numeric(FDR))) %>% 
-      dplyr::select(Term, scores)
-  )
-  
-  # Add this line to filter the top terms
-  data <- data %>% dplyr::arrange(desc(scores)) %>% dplyr::slice(1:ntop)
-  
-  # Convert Term to a factor and specify the levels to be in the order of descending scores
-  data$Term <- factor(data$Term, levels = data$Term[order(data$scores, decreasing = TRUE)])
-  
   p <- ggplot(data,
               aes(x = Term, y = scores, size = scores, fill = scores)) +
-    expand_limits(y = 1) +
-    geom_point(shape = 21) +
+    expand_limits(y = 1) + geom_point(shape = 21) +
     scale_size(range = c(2.5,12.5), name="-log10(FDR)") +
-    scale_fill_continuous(low = 'royalblue', high = 'red4', name="-log10(FDR)") +
-    xlab('') +
-    ylab('-log10(FDR)') +
+    scale_fill_continuous(low = 'blue', high = 'red', name="-log10(FDR)") +
+    xlab('') + ylab('-log10(FDR)') +
     labs(
-      title = paste0("Enriched GOs for result ", name),
+      title = paste0("Enriched GOs for ", name),
       subtitle = paste('Top', ntop, 'terms ordered by adjustes pvalue'),
       caption = 'Cut-off lines drawn at equivalents of p=0.05, p=0.01, p=0.001') +
     geom_hline(yintercept = c(-log10(0.05), -log10(0.01), -log10(0.001)),
@@ -163,8 +123,7 @@ ntop <- 20
                size = c(0.5, 1.5, 3)) +
     theme_bw(base_size = 24) +
     theme(
-      legend.position = 'right',
-      legend.background = element_rect(),
+      legend.position = 'right', legend.background = element_rect(),
       plot.title = element_text(angle = 0, size = 16, face = 'bold', vjust = 1),
       plot.subtitle = element_text(angle = 0, size = 14, face = 'bold', vjust = 1),
       plot.caption = element_text(angle = 0, size = 12, face = 'bold', vjust = 1),
@@ -183,15 +142,26 @@ ntop <- 20
       title = element_text(size = 14, face = "bold")) +
     coord_flip()
   
-  print(p)
+  ggsave(
+    filename = file.path(here("data/seidr/clustering/GO_cluster/"), paste0("GO-enr_", name, ".png")),
+    plot = p, width = 12, height = 8.5)
 }
-}
+
+# B. for the first degree neighbours of degs
+first_degree_neighbour_genes <- load(here("data/seidr/clustering/first_degree_neighbor_genes.rds"))
+res.list <- map(first_degree_neighbour_genes, ~ Filter(function(x) length(x) > 1, .x))
+results <- map(res.list, ~ map(.x, ~ topGO_combined(.x, background, goannot, 
+                                                    alpha = 0.05, 
+                                                    p.adjust = "BH")))
+results <- map(results, ~ discard(.x, ~ nrow(.x) == 0))
+dir.create(here("data/seidr/clustering/GO_first_neighbors/"))
+saveRDS(results, here("data/seidr/clustering/GO_first_neighbors/firstNeighborGO.rds"))
 
 # gene ratio in the circles
 for (name in names(results)) {
   for(nei in names(results[[name]])) {
     write_tsv(results[[name]][[nei]], 
-              file = here(paste0("data/seidr/clustering/GO/GO-enr_", name, "_",nei ,".tsv")))
+              file = here(paste0(here("data/seidr/clustering/GO_first_neighbors/GO-enr_"), name, "_",nei ,".tsv")))
       dat <- results[[name]][[nei]] %>%
       mutate(FDR = parse_double(sub("<","",FDR)),
              GeneRatio = Significant/Annotated,
@@ -205,7 +175,74 @@ for (name in names(results)) {
       ggtitle(paste0(nei, ": ", name," GO enrichment")) + coord_flip()
     plot(p)
     ggsave(
-      filename = file.path("data/seidr/clustering/GO/", paste0("GO-enr_", name, "_", nei, ".png")),
+      filename = file.path(here("data/seidr/clustering/GO_first_neighbors/"), paste0("GO-enr_", name, "_", nei, ".png")),
       plot = p, width = 10, height = 6)
   }
 }
+
+# C. For specific genes of a timepoint of a specific cluster
+
+# Restart R
+library(topGO)
+library(dplyr)
+library(tidyverse)
+library(tidyr)
+library(here)
+library(readxl)
+library(dplyr)
+library(stringr)
+library(tibble)
+library(purrr)
+
+bb9 <- read.delim(here("data/seidr/clustering/filtered_backbone-9-percent.tsv"), 
+                  stringsAsFactors = F)
+
+bb9_df1 <- bb9 %>% dplyr::select(Source, Source_Cluster) %>% rename(Gene=Source, Cluster=Source_Cluster)
+bb9_df2 <- bb9 %>% dplyr::select(Target, Target_Cluster) %>% rename(Gene=Target, Cluster=Target_Cluster)
+combined_df <- bind_rows(bb9_df1,bb9_df2) %>% distinct()
+cluster_g <- split(combined_df$Gene, combined_df$Cluster)
+
+deg_file <- here("data/analysis/DE/allDeg.xlsx")
+timepoint_map <- c("S1A_2h" = "2h", "S1B_4h" = "4h", "S1C_8h" = "8h", 
+                   "S1D_12h" = "12h")
+
+deg_split_list <- imap(timepoint_map, ~ {
+  df <- read_excel(deg_file, sheet = .y) %>%
+    select(Gene_Id, Log2_Fold_Change)
+  list(up = df %>% filter(Log2_Fold_Change > 0),
+       down = df %>% filter(Log2_Fold_Change < 0)
+  )
+}) %>% set_names(timepoint_map) 
+
+targets <- tribble(~Time, ~Regulation, ~Cluster,
+  "2h", "up", "6", "2h", "up", "9", "2h", "down", "9",
+  "4h", "up", "6", "4h", "up", "9", "4h", "up", "5", "4h", "down", "4",
+  "8h", "down", "8")
+
+matched_genes <- function(cluster_genes, deg_genes) {
+  cluster_short <- str_sub(cluster_genes, 1, 12)
+  deg_short <- str_sub(deg_genes, 1, 12)
+  deg_genes[deg_short %in% cluster_short]}
+
+target_deg_genes <- list()
+
+for (i in seq_len(nrow(targets))) {
+  time <- targets$Time[i]
+  reg <- targets$Regulation[i]
+  cluster <- targets$Cluster[i]
+  
+  cluster_name <- paste0("Cluster", cluster)
+  genes_in_cluster <- cluster_g[[cluster_name]]
+  deg_df <- deg_split_list[[time]][[reg]]
+  
+  matched_gene_ids <- matched_genes(genes_in_cluster, deg_df$Gene_Id)
+  filtered_genes <- deg_df %>% filter(Gene_Id %in% matched_gene_ids)
+  
+  name <- paste(time, toupper(reg), cluster_name, sep = "_")
+  target_deg_genes[[name]] <- filtered_genes
+}
+
+target_deg_genes <- Filter(function(x) length(x) > 1, target_deg_genes)
+saveRDS(target_deg_genes, here("data/seidr/clustering/target_deg_genes.rds"))
+
+# No feasible terms found

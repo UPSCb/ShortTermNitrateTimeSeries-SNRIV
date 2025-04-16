@@ -78,7 +78,7 @@ saveRDS(d,"data/seidr/clustering/nodeMeasures.rds")
 # different Timepoint is in separate sheet
 g <- readRDS(here("data/seidr/clustering/graph.rds"))
 
-deg_file <- "data/deg/allDeg.xlsx"
+deg_file <- "data/analysis/DE/allDeg.xlsx"
 timepoint_map <- c("S1A_2h" = "2h", "S1B_4h" = "4h", "S1C_8h" = "8h", 
                    "S1D_12h" = "12h")
 
