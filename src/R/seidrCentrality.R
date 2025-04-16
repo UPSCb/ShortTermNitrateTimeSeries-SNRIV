@@ -6,7 +6,6 @@ library(tidyr)
 library(Publish)
 library(tibble)
 library(readr)
-library(purrr)
 library(readxl)
  
 bb9 <- read_tsv(here("data/seidr/clustering/filtered_backbone-9-percent.tsv"),
@@ -71,7 +70,7 @@ saveRDS(d,"data/seidr/clustering/nodeMeasures.rds")
 #        out_neighbors = names(neighbors(g, v, mode = "out")))})
 # 
 # neighbor_df <- map_dfr(first_neighbors_list, function(x) {
-#   tibble(node = x$node, direction = c(rep("in", length(x$in_neighbors)), 
+#   tibble(node = x$node, direction = c(rep("in", length(x$in_neighbors)),
 #                                       rep("out", length(x$out_neighbors))),
 #          neighbor = c(x$in_neighbors, x$out_neighbors))})
 
@@ -87,42 +86,56 @@ deg_split_list <- imap(timepoint_map, ~ {
   df <- read_excel(deg_file, sheet = .y) %>%
     select(Gene_Id, Log2_Fold_Change)
   list(up = df %>% filter(Log2_Fold_Change > 0),
-    down = df %>% filter(Log2_Fold_Change < 0)
-    )
+       down = df %>% filter(Log2_Fold_Change < 0)
+  )
 }) %>% set_names(timepoint_map) 
 
-#' Extract the first degree neighbours of DEGs genes from network
+#' Extract first degree neighbours of DEGs genes from network
+#' 
 # Use your dataframe or this
 # subgrafs <- map(subgraf <- make_ego_graph(g,1, get.vertex.attribute(graf,"name") %in% goi))
 
-# get_neighbors <- function(goi, g) {
-#   ego_list <- make_ego_graph(g, order = 1, nodes = V(g)[name %in% goi])
-#   if (length(ego_list) == 0) return(make_empty_graph())
-#   combined_graph <- reduce(ego_list, igraph::union)
-#   return(combined_graph)
-# }
+# ego_list <- make_ego_graph(g, order = 1, nodes = V(g)[name %in% deg_split_list[["2h"]]$up$Gene_Id])
 
+library(purrr)
 get_neighbors <- function(goi, g) {
   ego_list <- make_ego_graph(g, order = 1, nodes = V(g)[name %in% goi])
-  ego_list <- unlist(ego_list) %>% unique()
   return(ego_list)
 }
 
-deg_neighbors <- purrr::map(deg_split_list, ~ {
+deg_neighbor_graph <- purrr::map(deg_split_list, ~ {
   list(up_neighbors = get_neighbors(.x$up$Gene_Id, g),
     down_neighbors = get_neighbors(.x$down$Gene_Id, g))})
 
-View(deg_neighbors)
+first_degree_neighbour_genes <- map(deg_neighbor_graph, function(t) {
+  map(t, function(n) {
+    map(n, function(g) {
+      names(V(g))
+    }) %>%
+      unlist() %>%
+      unique()
+  })
+})
 
-saveRDS(deg_neighbors,"data/seidr/clustering/deg_first_neighbors.rds")
+saveRDS(deg_neighbor_graph, "data/seidr/clustering/deg_neighbor_graph.rds")
+saveRDS(first_degree_neighbour_genes, "data/seidr/clustering/first_degree_neighbor_genes.rds")
+# purrr::walk(barplot(table(sapply(lapply(deg_neighbors,clusters),"[[","csize")),
+#         labs=2,main="DEG cluster size",ylab="occurence",xlab="csize"))
 
-purrr::walk(barplot(table(sapply(lapply(deg_neighbors,clusters),"[[","csize")),
-        labs=2,main="DEG cluster size",ylab="occurence",xlab="csize"))
+# another code from Edoardo:
+# extract_firstDegreeNeighbours <-  function(goi, graf) {
+#   subgraf <- make_ego_graph(graf,1,
+#                             get.vertex.attribute(graf,"name") %in% goi)
+#   
+#   gene_vector <- map(subgraf, ~ V(.x)$name) %>% unlist() %>% unique()
+#   
+# }
+
+# list_of_DEGsAndNieghbours_vectors <- map(list_of_DEGs_vectors, ~ extract_firstDegreeNeighbours(.x, g))
 
 #' combine all these networks together
-combined_networks <- map(
-fdn <- Reduce("%u%",deg_neighbors)
-)
+combined_networks <- map(deg_neighbor_graph
+                         Reduce("%u%",deg_neighbors))
 
 #' Look at how many clusters we get and how many nodes are involved
 # clusters(fdn)
