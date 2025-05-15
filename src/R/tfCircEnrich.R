@@ -113,3 +113,12 @@ tf_deg_indices <- which(
 
 g_tf_deg <- subgraph.edges(g, E(g)[tf_deg_indices], delete.vertices = FALSE)
 
+
+get_neighbors <- function(goi, g) {
+  ego_list <- make_ego_graph(g, order = 1, nodes = V(g)[name %in% goi])
+  return(ego_list)
+}
+
+TF_neighbor_graph_list <- get_neighbors(unique(TFgene$Potra), g)
+TF_neighbor_graph <- Reduce("%u%",TF_neighbor_graph_list)
+
