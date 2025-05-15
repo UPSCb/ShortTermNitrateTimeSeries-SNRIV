@@ -71,7 +71,6 @@ topGO_combined <- function(set,background,annotation,
 }
 
 # Go to A, B or C specific GOs
-
 # A. For all the cluster specific genes 
 bb9 <- read.delim(here("data/seidr/clustering/filtered_backbone-9-percent.tsv"), 
                   stringsAsFactors = F)
@@ -88,6 +87,8 @@ for (name in names(cluster_g)) {
 }
 
 res <- Filter(function(x) length(x) > 1, res)
+
+# with all vst expressed as background
 results1 <- map(res, ~ topGO_combined(.x, background, goannot, alpha = 0.05, 
                                      p.adjust = "BH"))
 results1 <- discard(results1, ~ nrow(.x) == 0)
@@ -147,6 +148,47 @@ for (name in names(results1)) {
     plot = p, width = 12, height = 8.5)
 }
 
+files <- list.files(path = "data/seidr/clustering/GO_cluster/", pattern = "\\.tsv$", full.names = TRUE)
+
+combined_df <- lapply(files, function(file) {
+  df <- read.delim(file, sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+  if ("FDR" %in% names(df)) {
+    df$FDR <- suppressWarnings(as.numeric(df$FDR))
+  }
+  df$Cluster <- basename(file)
+  
+  return(df)
+}) %>%
+  bind_rows()
+
+write.table(combined_df, "data/seidr/clustering/GO_cluster/combined_GO.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
+
+#A.2 with bb9 all genes as background
+bb9bg <- unique(combined_df$Gene)
+results2 <- map(res, ~ topGO_combined(.x, bb9bg, goannot, alpha = 0.05, 
+                                      p.adjust = "BH"))
+results2 <- discard(results2, ~ nrow(.x) == 0)
+
+dir.create("data/seidr/clustering/GO_cluster_bb9bg/")
+walk2 (results2, names(results2), ~ write_tsv(.x, file = here(paste0("data/seidr/clustering/GO_cluster_bb9bg/GO-enr_", .y, ".tsv"))))
+saveRDS (results2, "data/seidr/clustering/GO_cluster_bb9bg/clusterGO.rds")
+
+#merge GOs into one file
+files <- list.files(path = "data/seidr/clustering/GO_cluster_bb9bg/", pattern = "\\.tsv$", full.names = TRUE)
+
+combined_df <- lapply(files, function(file) {
+  df <- read.delim(file, sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+    if ("FDR" %in% names(df)) {
+    df$FDR <- suppressWarnings(as.numeric(df$FDR))
+  }
+  df$SourceFile <- basename(file)
+  
+  return(df)
+}) %>%
+  bind_rows()
+
+write.table(combined_df, "data/seidr/clustering/GO_cluster_bb9bg/combined_GO.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
+
 # B. for the first degree neighbours of degs
 first_degree_neighbour_genes <- load(here("data/seidr/clustering/first_degree_neighbor_genes.rds"))
 res.list <- map(first_degree_neighbour_genes, ~ Filter(function(x) length(x) > 1, .x))
@@ -156,6 +198,22 @@ results <- map(res.list, ~ map(.x, ~ topGO_combined(.x, background, goannot,
 results <- map(results, ~ discard(.x, ~ nrow(.x) == 0))
 dir.create(here("data/seidr/clustering/GO_first_neighbors/"))
 saveRDS(results, here("data/seidr/clustering/GO_first_neighbors/firstNeighborGO.rds"))
+
+#merge GOs into one file
+files <- list.files(path = "data/seidr/clustering/GO_first_neighbors/", pattern = "\\.tsv$", full.names = TRUE)
+
+combined_df <- lapply(files, function(file) {
+  df <- read.delim(file, sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+  if ("FDR" %in% names(df)) {
+    df$FDR <- suppressWarnings(as.numeric(df$FDR))
+  }
+  df$SourceFile <- basename(file)
+  
+  return(df)
+}) %>%
+  bind_rows()
+
+write.table(combined_df, "data/seidr/clustering/GO_first_neighbors/combined_GO.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
 
 # gene ratio in the circles
 for (name in names(results)) {
@@ -181,7 +239,6 @@ for (name in names(results)) {
 }
 
 # C. For specific genes of a timepoint of a specific cluster
-
 # Restart R
 library(topGO)
 library(dplyr)
@@ -193,6 +250,20 @@ library(dplyr)
 library(stringr)
 library(tibble)
 library(purrr)
+
+background <- readLines(here("data/analysis/DE/bg.csv"))
+
+mapping <- read.delim(here("data/seidr/clustering/gene_go.txt"), stringsAsFactors = F)
+prepAnnot <- function(annot){
+  # Remove transcript version suffixes (e.g., .1, .2)
+  annot$Sequence.Name <- sub("\\..*$", "", annot$Sequence.Name)
+  # Split GO terms by semicolon
+  geneID2GO <- strsplit(annot$Annotation.GO.ID, ";")
+  names(geneID2GO) <- annot$Sequence.Name
+  return(geneID2GO)
+}
+
+goannot <- prepAnnot(mapping)
 
 bb9 <- read.delim(here("data/seidr/clustering/filtered_backbone-9-percent.tsv"), 
                   stringsAsFactors = F)
@@ -243,6 +314,59 @@ for (i in seq_len(nrow(targets))) {
 }
 
 target_deg_genes <- Filter(function(x) length(x) > 1, target_deg_genes)
-saveRDS(target_deg_genes, here("data/seidr/clustering/target_deg_genes.rds"))
 
-# No feasible terms found
+topGO_combined <- function(set,background,annotation,
+                           ontology=c("BP","CC","MF"),
+                           algorithm="parentchild",
+                           statistic="fisher",
+                           p.adjust=sort(p.adjust.methods),
+                           alpha=0.05,
+                           getgenes=FALSE){
+  
+  p.adjust <- match.arg(p.adjust)
+  
+  # create the allGenes
+  allGenes <- factor(as.integer(background %in% set), levels = c(0, 1))
+  names(allGenes) <- background
+  
+  # iterate over the ontologies
+  lst <- lapply(ontology, function(o,g,a){
+    GOdata <- new("topGOdata", 
+                  ontology = o, 
+                  allGenes = g,
+                  annot = annFUN.gene2GO, 
+                  gene2GO = a)
+    results <- runTest(GOdata,algorithm=algorithm,statistic=statistic)
+    
+    n <- ifelse(p.adjust=="none",
+                sum(score(results) <= alpha),
+                sum(p.adjust(score(results),method=p.adjust) <= alpha))
+    
+    if(n==0){
+      return(NULL)
+    } else{
+      #I added "numChar=1000 to not trim the GO
+      resultTable <- as_tibble(GenTable(GOdata,
+                                        results,
+                                        numChar=1000,
+                                        topNodes=n)) %>% 
+        rename_with(function(sel){"FDR"},.cols=last_col())
+      if(getgenes){
+        resultTable <- resultTable %>%
+          mutate(allgenes = map(GO.ID,function(x){allGO[[x]]})) %>%
+          mutate(siggenes = map(allgenes,function(x){unlist(x)[unlist(x) %in% set]}))  %>%
+          mutate(allgenes = map(allgenes,function(x){paste(x,collapse = "|")}) %>% unlist(use.names = F),
+                 siggenes = map(siggenes,function(x){paste(x,collapse = "|")}) %>% unlist(use.names = F))
+      }
+      resultTable
+    }
+  },allGenes,annotation)
+  names(lst) <- ontology
+  return(bind_rows(lst, .id = "GO category"))
+}
+
+results3 <- map(target_deg_genes, ~ topGO_combined(.x, background, goannot, 
+                                                   alpha = 0.05, 
+                                                   p.adjust = "BH"))
+
+#no signiifcant terms found
