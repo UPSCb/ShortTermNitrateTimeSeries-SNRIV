@@ -101,6 +101,7 @@ library(igraph)
 library(readxl)
 
 TFgene <- unique(read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 2)$Potra)
+deg4h <- unique((read_excel("data/analysis/DE/allDeg.xlsx", sheet = "S1B_4h")$Gene_Id))
 
 get_neighbors <- function(goi, g) {
   ego_list <- make_ego_graph(g, order = 1, nodes = V(g)[name %in% goi])
@@ -114,6 +115,14 @@ TF_neighbor_graph_list <- get_neighbors(unique(TFgene), g)
 TF_neighbor_graph <- Reduce("%u%",TF_neighbor_graph_list)
 
 saveRDS(TF_neighbor_graph, "data/enrichment/TFsubgraph_2h.rds")
+
+degree(TF_neighbor_graph)
+TF_deg_graph <- subgraph(TF_neighbor_graph, vids = V(TF_neighbor_graph)[name %in% c(TFgene,deg4h)])
+degree(TF_deg_graph)[names(degree(TF_deg_graph)) %in% TFgene] %>%
+  as.data.frame()
+
+
+
 
 subgraph_TFs <- intersect(V(TFsubgraph_8h)$name, TFgene)
 circClock <- unique(read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 3)$Potra)
