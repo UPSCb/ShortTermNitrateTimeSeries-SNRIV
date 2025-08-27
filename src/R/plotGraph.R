@@ -26,6 +26,8 @@ deg2h <- unique(read_excel("data/analysis/DE/allDeg.xlsx", sheet = "S1A_2h")$Gen
 deg4h <- unique(read_excel("data/analysis/DE/allDeg.xlsx", sheet = "S1B_4h")$Gene_Id)
 deg8h <- unique(read_excel("data/analysis/DE/allDeg.xlsx", sheet = "S1C_8h")$Gene_Id)
 
+deg <- unique(c(deg2h, deg4h, deg8h))
+
 TF_neighbor_deg_count <- map(TF_neighbor_graph_neighbors, function(n) {
   c("2h" = sum(n %in% deg2h),
     "4h" = sum(n %in% deg4h),
@@ -33,34 +35,44 @@ TF_neighbor_deg_count <- map(TF_neighbor_graph_neighbors, function(n) {
     "allNei" = length(n))
 }) %>% bind_rows(.id = "TF")
 
-# Select TFs with >=10 neighbors DE at 2h
-TFinterest <- TF_neighbor_deg_count %>% filter(`2h` >= 10) %>% pull(TF)
-TFinterest <- TF_neighbor_deg_count %>% filter(`4h` >= 10) %>% pull(TF)
-TFinterest <- TF_neighbor_deg_count %>% filter(`8h` >= 10) %>% pull(TF)
+TFinterest <- TF_neighbor_deg_count %>% filter(`allNei` >= 1) %>% pull(TF)
 
-# Select TFs with >=1 neighbors DE at 2h, just save it don't use it
-# TFinterest <- TF_neighbor_deg_count %>% filter(`2h` >= 1) %>% pull(TF)
-# TFinterest <- TF_neighbor_deg_count %>% filter(`4h` >= 1) %>% pull(TF)
-# TFinterest <- TF_neighbor_deg_count %>% filter(`8h` >= 1) %>% pull(TF)
+# # Select TFs with >=10 neighbors DE at each timepoint, don't use it
+# TFinterest <- TF_neighbor_deg_count %>% filter(`2h` >= 10) %>% pull(TF)
+# TFinterest <- TF_neighbor_deg_count %>% filter(`4h` >= 10) %>% pull(TF)
+# TFinterest <- TF_neighbor_deg_count %>% filter(`8h` >= 10) %>% pull(TF)
 
-# or Select the top 20 TFs' neighbors DE at 2h
-# TFinterest <- TF_neighbor_deg_count %>% arrange(desc(`2h`)) %>% slice_head(n = 20) %>% pull(TF)
+# # Select TFs with >=1 neighbors DE at 2h, don't use it
+# # TFinterest <- TF_neighbor_deg_count %>% filter(`2h` >= 1) %>% pull(TF)
+# # or Select the top 20 TFs' neighbors DE at 2h, don't use it
+# # TFinterest <- TF_neighbor_deg_count %>% arrange(desc(`2h`)) %>% slice_head(n = 20) %>% pull(TF)
+# 
+# graph_2hdeg_10neighbor <- Reduce("%u%", keep_at(TF_neighbor_graph_list, 
+#                                                 at = TFinterest)) %>%
+#   subgraph(vids = V(.)[name %in% c(TFinterest, deg2h)])
+# 
+# graph_4hdeg_10neighbor <- Reduce("%u%", keep_at(TF_neighbor_graph_list, 
+#                                                 at = TFinterest)) %>%
+#   subgraph(vids = V(.)[name %in% c(TFinterest, deg4h)])
+# 
+# graph_8hdeg_10neighbor <- Reduce("%u%", keep_at(TF_neighbor_graph_list, 
+#                                                 at = TFinterest)) %>%
+#   subgraph(vids = V(.)[name %in% c(TFinterest, deg8h)])
 
-graph_2hdeg_10neighbor <- Reduce("%u%", keep_at(TF_neighbor_graph_list, 
-                                                at = TFinterest)) %>%
-  subgraph(vids = V(.)[name %in% c(TFinterest, deg2h)])
+# subgraph <- graph_2hdeg_10neighbor
+# subgraph <- graph_4hdeg_10neighbor
+# subgraph <- graph_8hdeg_10neighbor
 
-graph_4hdeg_10neighbor <- Reduce("%u%", keep_at(TF_neighbor_graph_list, 
-                                                at = TFinterest)) %>%
-  subgraph(vids = V(.)[name %in% c(TFinterest, deg4h)])
+# If you want all Tfs to deg as first neighbours
+graph_tf_neighbor <- Reduce("%u%", keep_at(TF_neighbor_graph_list,
+                                               at = TFinterest)) %>%
+  subgraph(vids = V(.)[name %in% c(TFinterest, deg)])
 
-graph_8hdeg_10neighbor <- Reduce("%u%", keep_at(TF_neighbor_graph_list, 
-                                                at = TFinterest)) %>%
-  subgraph(vids = V(.)[name %in% c(TFinterest, deg8h)])
+write_graph(graph_tf_neighbor,format = "graphml",
+            file="data/seidr/alltf-10neiDeg_neighbor.graphml")
 
-subgraph <- graph_2hdeg_10neighbor
-subgraph <- graph_4hdeg_10neighbor
-subgraph <- graph_8hdeg_10neighbor
+write_graph(graph_tf_neighbor,format = "graphml",
+            file="data/seidr/alltf-1neiDeg_neighbor.graphml")
 
 annotations <- read.table("data/enrichment/classGene", header = TRUE, sep = "\t", 
                           stringsAsFactors = FALSE)
@@ -199,3 +211,82 @@ for (name in names(layouts)) {
        vertex.label = NA,
        vertex.size = 5)
 }
+
+# calculate centrality measures for TF(>10 degree)-DEG subnetwork
+library(here)
+library(igraph)
+library(dplyr) 
+library(tidyverse)
+library(asnipe)
+library(purrr)
+
+g <- graph_tf_neighbor
+
+set.seed(10)
+de <- igraph::degree(g)
+st <- igraph::strength(g)
+be=betweenness(g, normalized=T)
+pr <- page_rank(g)$vector
+
+names=V(g)$name
+
+d=data.frame(node.name=names, degree=de, strength=st, betweeness=be, 
+             pageRank=pr) 
+
+# genes_interest <- d %>% filter(betweeness > 0.0010 | degree > 10)
+
+bb9 <- read_tsv(here("data/seidr/clustering/filtered_backbone-9-percent.tsv"),
+                col_names=T,col_types=cols(.default=col_character()),
+                show_col_types=FALSE)
+
+genes_all <- d %>%
+  left_join(dplyr::select(bb9, Source, Source_Cluster), 
+            by=c("node.name" = "Source")) %>% 
+  distinct()
+
+write_tsv(genes_all, here("data/seidr/allTF-Deg_subnetwork_stats.tsv"))  
+
+# # Now do single time point analysis
+# get_genes_interest <- function(graphml_file, output_tsv) {
+#   
+#   gr <- igraph::read_graph(graphml_file,
+#                            format = "graphml")
+#   
+#   set.seed(10)
+#   de <- igraph::degree(gr)
+#   
+#   names=V(gr)$name
+#   
+#   
+#   d=data.frame(node.name=names, degree=de) 
+#   
+#   
+#   violin <- ggplot(data = d, aes(x = basename(graphml_file), y= degree)) +
+#     geom_violin() +
+#     labs(x = "", y = "Degree")
+#   
+#   
+#   genes_interest <- d %>%
+#     mutate(
+#       percentile99 = degree > quantile(d$degree, 0.995),
+#       Top20 = degree %in% head(base::sort(d$degree, decreasing=TRUE), n=20)
+#     ) %>% 
+#     filter(percentile99 & Top20)
+#   
+#   # p <- plot(gr, vertex.label="", vertex.color="gold", edge.color="slateblue", vertex.size=de*2)
+#   
+#   print(violin)
+#   # print(p)
+#   
+#   write_tsv(genes_interest, output_tsv)
+#   
+#   return(genes_interest)
+#   
+# }
+# 
+# timepoints <- c("2h", "4h", "8h", "12h")
+# genes_interests <- purrr::map(timepoints, ~ get_genes_interest(
+#   here(paste0("data/seidr/clustering/firstDegreeNeighbours_", .x, ".graphml")),
+#   here(paste0("data/seidr/clustering/genes_interest_centrality_measures/genes_interest_firstDegreeNeighbours_", .x, ".graphml"))
+# ))
+# 

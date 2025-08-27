@@ -7,35 +7,24 @@ library(readxl)
 # bb9 graph
 g <- readRDS("data/seidr/clustering/graph.rds")
 
-# AT gene IDs for circadian clock and circadian regulation
-# circClock <- read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 3)
-# circReg <- read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 4)
-
-# all best homologs of nitrate responsive TFs from Varala et al 2018  but remove the  circadian clock genes
-# TFgene <- read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 2)
-# nitGene <- read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 2)
-
-# all Potra TFs from plantgenie but remove the  circadian clock genes
-TFgene2 <- unique(read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", 
+# all Potra TFs from plantgenie but remove the circadian clock genes and
+# the best homolog of nitrate responsive # TFs from Varala et al 2018 and Vidal et al., 2020
+tf <- unique(read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", 
                             sheet = "tfCatPotra")$potra)
-
-# all Potra TFs from plantgenie and only the best homolog of nitrate responsive
-# TFs from Varala et al 2018 but remove the  circadian clock genes
-tf <- unique(read_table("data/enrichment/potra.txt", col_names = T)$potra)
 
 get_neighbors <- function(goi, g) {
   ego_list <- make_ego_graph(g, order = 1, nodes = V(g)[name %in% goi])
   names(ego_list) <- names(V(g)[name %in% goi])
   return(ego_list)}
 
-# TF_neighbor_graph_list <- get_neighbors(unique(TFgene$Potra), g)
 TF_neighbor_graph_list <- get_neighbors(tf, g)
 TF_neighbor_graph_neighbors <- map(TF_neighbor_graph_list, ~ names(V(.x)))
 
-deg2h <- unique((read_excel("data/analysis/DE/allDeg.xlsx", sheet = "S1A_2h")$Gene_Id))
+deg2h <- unique((read_excel("data/analysis/DEallDeg.xlsx", sheet = "S1A_2h")$Gene_Id))
 deg4h <- unique((read_excel("data/analysis/DE/allDeg.xlsx", sheet = "S1B_4h")$Gene_Id))
 deg8h <- unique((read_excel("data/analysis/DE/allDeg.xlsx", sheet = "S1C_8h")$Gene_Id))
 
+# if you want the graphs time wise
 TF_neighbor_deg_count <- map(TF_neighbor_graph_neighbors, function(n){
   return(c("2h" = sum(n %in% deg2h),
            "4h" = sum(n %in% deg4h),

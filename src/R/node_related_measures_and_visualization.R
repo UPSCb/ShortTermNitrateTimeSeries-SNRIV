@@ -6,6 +6,7 @@ library(asnipe)
 library(purrr)
 
 g <- readRDS(here("data/seidr/clustering/graph.rds"))
+g <- readRDS(here("data/seidr/clustering/graph.rds"))
 degree(g)
 
 set.seed(10)
@@ -15,10 +16,8 @@ be <- readRDS(here("data/seidr/clustering/betweeness.rds"))
 
 names=V(g)$name
 
-
 d=data.frame(node.name=names, degree=de, strength=st, betweeness=be) 
 head(d) #display first 6 lines of data
-
 
 plot(strength~degree, data=d)
 # In our case strength=betweenness
@@ -40,6 +39,11 @@ genes_interest <- genes_interest %>%
 
 write_tsv(genes_interest, here("data/seidr/clustering/genes_interest_centrality_measures/genes_interest_whole_network.tsv"))  
 
+genes_all <- d %>%
+  left_join(dplyr::select(bb9, Source, Source_Cluster), by=c("node.name" = "Source")) %>% 
+  distinct()
+
+write_tsv(genes_all, here("data/seidr/clustering/all_genes_network_stats.tsv"))  
 
 # Now do single time point analysis
 get_genes_interest <- function(graphml_file, output_tsv) {
@@ -52,16 +56,13 @@ de <- igraph::degree(gr)
 
 names=V(gr)$name
 
-
 d=data.frame(node.name=names, degree=de) 
-
 
 violin <- ggplot(data = d, aes(x = basename(graphml_file), y= degree)) +
   geom_violin() +
   labs(x = "", y = "Degree")
 
-
- genes_interest <- d %>%
+genes_interest <- d %>%
   mutate(
     percentile99 = degree > quantile(d$degree, 0.995),
     Top20 = degree %in% head(base::sort(d$degree, decreasing=TRUE), n=20)
@@ -84,4 +85,3 @@ genes_interests <- purrr::map(timepoints, ~ get_genes_interest(
   here(paste0("data/seidr/clustering/firstDegreeNeighbours_", .x, ".graphml")),
        here(paste0("data/seidr/clustering/genes_interest_centrality_measures/genes_interest_firstDegreeNeighbours_", .x, ".graphml"))
 ))
-

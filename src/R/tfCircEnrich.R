@@ -1,11 +1,10 @@
+# circadian and TF enrichment in Clusters
 library(tidyverse)
 library(here)
 library(igraph)
 library(asnipe)
 library(readxl)
 
-
-# circadian and TF enrichment in Clusters
 bb9 <- read_tsv(here("data/seidr/clustering/filtered_backbone-9-percent.tsv"),
                 col_names = TRUE, col_types = cols(.default = col_character()),
                 show_col_types = FALSE)
@@ -15,18 +14,23 @@ cluster_info <- rbind(
   bb9[, c("Target", "Target_Cluster")] %>% setNames(c("geneID", "Cluster"))
 ) %>% distinct()
 
+# AT homologs for circadian clock and circadian regulation in Potra
 circClock <- read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 3)
 circReg <- read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 4)
-TFgene <- read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 2)
-# vidal
-nitGene <- read_excel("data/enrichment/nitResTFnCircadian.xlsx", sheet = 2)
 
+# all Potra TFs from plantgenie but remove the circadian clock genes and
+# the best homolog of nitrate responsive # TFs from Varala et al 2018 and Vidal et al., 2020
+TFgene <- read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 2)
+
+# Nitrogen metabolism genes
+nitGene <- read_excel("data/enrichment/nitResponsiveTFnCircadian.xlsx", sheet = 5)
 
 cluster_info_ext <- cluster_info %>%
   mutate(IsCircClock = geneID %in% circClock$Potra,
          IsCircReg = geneID %in% circReg$Potra,
          IsTF = geneID %in% TFgene$Potra,
          IsNitGene = geneID %in% nitGene$potra)
+
 sum(cluster_info_ext$IsCircClock)
 sum(cluster_info_ext$IsCircReg)
 sum(cluster_info_ext$IsTF)
@@ -138,10 +142,9 @@ get_neighbors <- function(goi, g) {
 
 # TF_neighbor_graph_list <- get_neighbors(unique(TFgene), g)
 # TF_neighbor_graph <- Reduce("%u%",TF_neighbor_graph_list)
-# 
+ 
 # saveRDS(TF_neighbor_graph, "data/enrichment/TFsubgraph_2h.rds")
-# 
-# degree(TF_neighbor_graph)
+ 
 # TF_deg_graph <- subgraph(TF_neighbor_graph, vids = V(TF_neighbor_graph)[name %in% c(TFgene,deg4h)])
 # degree(TF_deg_graph)[names(degree(TF_deg_graph)) %in% TFgene] %>%
 #   as.data.frame()
