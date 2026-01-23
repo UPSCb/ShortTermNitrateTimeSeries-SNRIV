@@ -11,40 +11,208 @@
 #' # Setup
 
 #' * Libraries
+#' 
 suppressPackageStartupMessages({
     library(data.table)
     library(DESeq2)
     library(gplots)
-    # library(ggplots2)
+    library(ggplots2)
     library(here)
     library(hyperSpec)
     library(RColorBrewer)
     library(tidyverse)
     library(VennDiagram)
 })
-
+#'
 #' * Helper files
 suppressMessages({
-    # source(here("UPSCb-common/templates/plotEnrichedTreemap.R"))
     source(here("UPSCb-common/src/R/featureSelection.R"))
     source(here("UPSCb-common/src/R/volcanoPlot.R"))
-    # souxrce(here("UPSCb-common/src/R/gopher.R"))
 })
-
-#' * Graphics
+#'
+#'#' * Graphics
 pal=brewer.pal(8,"Dark2")
 hpal <- colorRampPalette(c("blue","white","red"))(100)
 mar <- par("mar")
 
-#' * Data
-#' ```{r load, echo=FALSE,eval=FALSE}
-#' CHANGEME - here you are meant to load an RData object
-#' that contains a DESeqDataSet object. If you ran the 
-#' biological QA template, you need not change anything
-#' ```
+#' * Functions
+#' 1. plot specific gene expression
+line_plot <- function(dds=dds,vst=vst,gene_id=gene_id){
+  message(paste("Plotting",gene_id))
+  sel <- grepl(gene_id,rownames(vst))
+  stopifnot(sum(sel)==1)
+  
+  p <- ggplot(bind_cols(as.data.frame(colData(dds)),
+                        data.frame(value=vst[sel,])),
+              aes(x=sample,y=value,col=treatment,group=time)) +
+    geom_point() + geom_smooth() +
+    scale_y_continuous(name="VST expression") + 
+    ggtitle(label=paste("Expression for: ",gene_id))
+  
+  suppressMessages(suppressWarnings(plot(p)))
+  return(NULL)
+}
+
+#' 2. extract the DE results. Default cutoffs are
+#' from Schurch _et al._, RNA, 2016
+extract_results <- function(dds,vst,contrast,padj=0.05,lfc=1, plot=TRUE,
+                            verbose=TRUE, export=TRUE,
+                            default_dir=here("data/analysis/DE/"),
+                            default_prefix="DE-",
+                            labels=colnames(dds), sample_sel=1:ncol(dds),
+                            expression_cutoff=0, cexCol=.9, 
+                            debug=FALSE,filter=c("median",NULL),...){
+  
+  # get the filter
+  if(!is.null(match.arg(filter))){
+    filter <- rowMedians(counts(dds,normalized=TRUE))
+    message("Using the median normalized counts as default, set filter=NULL to revert to using the mean")
+  }
+  
+  # validation
+  if(length(contrast)==1){
+    res <- results(dds,name=contrast,filter = filter)
+  } else {
+    res <- results(dds,contrast=contrast,filter = filter)
+  }
+  
+  stopifnot(length(sample_sel)==ncol(vst))
+  
+  if(plot){
+    par(mar=c(5,5,5,5))
+    volcanoPlot(res)
+    par(mar=mar)
+  }
+  
+  # a look at independent filtering
+  if(plot){
+    plot(metadata(res)$filterNumRej,
+         type="b", ylab="number of rejections",
+         xlab="quantiles of filter")
+    lines(metadata(res)$lo.fit, col="red")
+    abline(v=metadata(res)$filterTheta)
+  }
+  
+  if(verbose){
+    message(sprintf("The independent filtering cutoff is %s, removing %s of the data",
+                    round(metadata(res)$filterThreshold,digits=5),
+                    names(metadata(res)$filterThreshold)))
+    
+    max.theta <- metadata(res)$filterNumRej[which.max(metadata(res)$filterNumRej$numRej),"theta"]
+    message(sprintf("The independent filtering maximises for %s %% of the data, corresponding to a base mean expression of %s (library-size normalised read)",
+                    round(max.theta*100,digits=5),
+                    round(quantile(counts(dds,normalized=TRUE),probs=max.theta),digits=5)))
+  }
+  
+  if(plot){
+    qtl.exp=quantile(counts(dds,normalized=TRUE),probs=metadata(res)$filterNumRej$theta)
+    dat <- data.frame(thetas=metadata(res)$filterNumRej$theta,
+                      qtl.exp=qtl.exp,
+                      number.degs=sapply(lapply(qtl.exp,function(qe){
+                        res$padj <= padj & abs(res$log2FoldChange) >= lfc & 
+                          ! is.na(res$padj) & res$baseMean >= qe
+                      }),sum))
+    if(debug){
+      plot(ggplot(dat,aes(x=thetas,y=qtl.exp)) + 
+             geom_line() + geom_point() +
+             scale_x_continuous("quantiles of expression") + 
+             scale_y_continuous("base mean expression") +
+             geom_hline(yintercept=expression_cutoff,
+                        linetype="dotted",col="red"))
+      
+      p <- ggplot(dat,aes(x=thetas,y=qtl.exp)) + 
+        geom_line() + geom_point() +
+        scale_x_continuous("quantiles of expression") + 
+        scale_y_log10("base mean expression") + 
+        geom_hline(yintercept=expression_cutoff,
+                   linetype="dotted",col="red")
+      suppressMessages(suppressWarnings(plot(p)))
+      
+      plot(ggplot(dat,aes(x=thetas,y=number.degs)) + 
+             geom_line() + geom_point() +
+             geom_hline(yintercept=dat$number.degs[1],linetype="dashed") +
+             scale_x_continuous("quantiles of expression") + 
+             scale_y_continuous("Number of DE genes"))
+      
+      plot(ggplot(dat,aes(x=thetas,y=number.degs[1] - number.degs),aes()) + 
+             geom_line() + geom_point() +
+             scale_x_continuous("quantiles of expression") + 
+             scale_y_continuous("Cumulative number of DE genes"))
+      
+      plot(ggplot(data.frame(x=dat$thetas[-1],
+                             y=diff(dat$number.degs[1] - dat$number.degs)),aes(x,y)) + 
+             geom_line() + geom_point() +
+             scale_x_continuous("quantiles of expression") + 
+             scale_y_continuous("Number of DE genes per interval"))
+      
+      plot(ggplot(data.frame(x=dat$qtl.exp[-1],
+                             y=diff(dat$number.degs[1] - dat$number.degs)),aes(x,y)) + 
+             geom_line() + geom_point() +
+             scale_x_continuous("base mean of expression") + 
+             scale_y_continuous("Number of DE genes per interval"))
+      
+      p <- ggplot(data.frame(x=dat$qtl.exp[-1],
+                             y=diff(dat$number.degs[1] - dat$number.degs)),aes(x,y)) + 
+        geom_line() + geom_point() +
+        scale_x_log10("base mean of expression") + 
+        scale_y_continuous("Number of DE genes per interval") + 
+        geom_vline(xintercept=expression_cutoff,
+                   linetype="dotted",col="red")
+      suppressMessages(suppressWarnings(plot(p)))
+    }
+  }
+  
+  sel <- res$padj <= padj & abs(res$log2FoldChange) >= lfc & ! is.na(res$padj) & 
+    res$baseMean >= expression_cutoff
+  
+  if(verbose){
+    message(sprintf(paste(
+      ifelse(sum(sel)==1,
+             "There is %s gene that is DE",
+             "There are %s genes that are DE"),
+      "with the following parameters: FDR <= %s, |log2FC| >= %s, base mean expression > %s"),
+      sum(sel),padj,
+      lfc,expression_cutoff))
+  }
+  
+  # proceed only if there are DE genes
+  if(sum(sel) > 0){
+    val <- rowSums(vst[sel,sample_sel,drop=FALSE])==0
+    if (sum(val) >0){
+      warning(sprintf(paste(
+        ifelse(sum(val)==1,
+               "There is %s DE gene that has",
+               "There are %s DE genes that have"),
+        "no vst expression in the selected samples"),sum(val)))
+      sel[sel][val] <- FALSE
+    } 
+    
+    if(export){
+      if(!dir.exists(default_dir)){
+        dir.create(default_dir,showWarnings=FALSE,recursive=TRUE,mode="0771")
+      }
+      write.csv(res,file=file.path(default_dir,paste0(default_prefix,"results.csv")))
+      write.csv(res[sel,],file.path(default_dir,paste0(default_prefix,"genes.csv")))
+    }
+    if(plot & sum(sel)>1){
+      heatmap.2(t(scale(t(vst[sel,sample_sel]))),
+                distfun = pearson.dist,
+                hclustfun = function(X){hclust(X,method="ward.D2")},
+                trace="none",col=hpal,labRow = FALSE,
+                labCol=labels[sample_sel],...
+      )
+    }
+  }
+  return(list(all=rownames(res[sel,]),
+              up=rownames(res[sel & res$log2FoldChange > 0,]),
+              dn=rownames(res[sel & res$log2FoldChange < 0,])))
+}
+
+
+#' Data
 load(here("data/analysis/salmon/dds.rds"))
 
-#' ## Normalisation for visualisation
+#' Normalisation for visualisation
 vsd <- varianceStabilizingTransformation(dds,blind=FALSE)
 vst <- assay(vsd)
 vst <- vst - min(vst)
@@ -53,14 +221,7 @@ save(vst,file=here("data/analysis/DE/vst-aware.rda"))
 write_delim(as.data.frame(vst) %>% rownames_to_column("ID"),
             here("data/analysis/DE/vst-aware.tsv"))
 
-#' ## Gene of interests
-#' ```{r goi, echo=FALSE,eval=FALSE}
-#' CHANGEME - Here, you can plot the expression pattern of your gene of
-#' interest. You need to have a list of genes in a text file, one geneID per line
-#' The ID should exist in your vst data.
-#' Note that for the plot to work, you also need to edit the first function (`line_plot`)
-#' at the top of this file
-#' ```
+#' line plot for any Gene of interests
 goi <- read_lines(here("doc/goi.txt"))
 stopifnot(all(goi %in% rownames(vst)))
 dev.null <- lapply(goi,line_plot,dds=dds,vst=vst)
@@ -72,7 +233,7 @@ dds <- DESeq(dds)
 #' The dispersion estimation is adequate
 plotDispEsts(dds)
 
-#' Check the different contrasts
+#' Check the different contrasts and relevel the dds object to none_0h sample
 resultsNames(dds)
 dds$treatmentTime <- relevel(dds$treatmentTime, "None_0h")
 dds <- DESeq(dds)
@@ -120,23 +281,9 @@ saveRDS(dds,file=here("data/dds2.rds"))
 # dds <- DESeq(dds)
 # Time4h.TreatmentKNO3= all DEGs which are not in other time points
 
-#' the second way is by using LRT:
-# full_model <- ~ Time + Treatment + Treatment:Time
-# For LRT test, provide a reduced model, that is the full model without
-# treatment:time term:
-# reduced_model <- ~ Treatment + Time
-# generate dds like the following:
-# dds1 <- DESeqDataSetFromTximport(txi =txi, colData = samples,
-#                                  design = ~ Treatment + Time + Treatment:Time)
-# dds_lrt_time <- DESeq(dds1, test="LRT", reduced = ~ Treatment + Time)
-# 
-# clusters <- degPatterns(cluster_rlog, metadata = samples, time="Time", 
-#                         col="Treatment")
-
-# From Edoardo:
 # Define your contrasts as a list of vectors
 dds <- readRDS("~/shruti/ShortTermNitrateTimeSeries-SNRIV/data/dds2.rds")
-samples <- read.table(here("doc/sampleTremula.csv"), header = T)
+samples <- read.table(here("doc/sampleTremula.tsv"), header = T)
 colnames(dds) <- paste(samples$sample, samples$treatmentTime,
                        samples$replicate, sep = "_")
 load("~/shruti/ShortTermNitrateTimeSeries-SNRIV/data/analysis/DE/vst-aware.rda")
@@ -177,14 +324,14 @@ process_contrast <- function(contrast, dds, vst, bins_up, bins_dn, results_list)
   Downregulated_KNO3_vs_KCL <- results_KNO3_vs_KCL$dn
   
   # Extract results for KNO3_Xh vs None_0h
-  results_KNO3_vs_0h <- extract_results(dds, vst, contrast_2, plot = FALSE, default_prefix = contrast_name2)
-  Upregulated_KNO3_vs_0h <- results_KNO3_vs_0h$up
-  Downregulated_KNO3_vs_0h <- results_KNO3_vs_0h$dn
-  
-  # Extract results for KCL_Xh vs None_0h
-  results_KCL_vs_0h <- extract_results(dds, vst, contrast_3, plot = FALSE, default_prefix = contrast_name3)
-  Upregulated_KCL_vs_0h <- results_KCL_vs_0h$up
-  Downregulated_KCL_vs_0h <- results_KCL_vs_0h$dn
+  # results_KNO3_vs_0h <- extract_results(dds, vst, contrast_2, plot = FALSE, default_prefix = contrast_name2)
+  # Upregulated_KNO3_vs_0h <- results_KNO3_vs_0h$up
+  # Downregulated_KNO3_vs_0h <- results_KNO3_vs_0h$dn
+  # 
+  # # Extract results for KCL_Xh vs None_0h
+  # results_KCL_vs_0h <- extract_results(dds, vst, contrast_3, plot = FALSE, default_prefix = contrast_name3)
+  # Upregulated_KCL_vs_0h <- results_KCL_vs_0h$up
+  # Downregulated_KCL_vs_0h <- results_KCL_vs_0h$dn
   
   # Find intersection and unique genes
   common_upreg <- intersect(Upregulated_KNO3_vs_0h, Upregulated_KNO3_vs_KCL)
@@ -247,11 +394,6 @@ process_contrast <- function(contrast, dds, vst, bins_up, bins_dn, results_list)
 contrasts <- list(contrast2h, contrast4h, contrast8h, contrast12h, contrast24h, 
                   contrast48h)
 
-# Initialize lists to store results
-results_list <- list()
-bins_up <- list()
-bins_dn <- list()
-
 # Loop through each contrast and process
 for (contrast in contrasts) {
   res <- process_contrast(contrast, dds, vst, bins_up, bins_dn, results_list)
@@ -259,14 +401,6 @@ for (contrast in contrasts) {
   bins_up <- res$bins_up
   bins_dn <- res$bins_dn
 }
-
-# Optionally, you can print or inspect the results_list, bins_up, and bins_dn
-print(results_list)
-print(bins_up)
-print(bins_dn)
-
-  # Optionally, you can store the results for further processing
-  # results_list[[paste0(contrast[2], "_vs_", contrast[3])]] <- result
 
 # If you want to clean vst file of zero rows
 vst_matrix_clean <- vst[rowSums(is.na(vst) | vst == 0) < ncol(vst), ]

@@ -22,25 +22,8 @@ source(here("../ERF85GeneExp/UPSCb-common/src/R/featureSelection.R"))
 #' * Graphics
 hpal <- colorRampPalette(c("blue","white","red"))(100)
 
-# The palette with black:
-# hpal <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-
-# To use for fills, add
-# scale_fill_manual(values=cbPalette)
-# 
-# # To use for line and point colors, add
-# scale_colour_manual(values=cbPalette)
-
-#' # Data
-#' * Sample information
-#' ```{r Instructions1,eval=FALSE,echo=FALSE}
-#' # The csv file should contain the sample information, including the sequencing file name, 
-#' # any relevant identifier, and the metadata of importance to the study design
-#' # as columns, e.g. the SamplingTime for a time series experiment
-#'  ```
-                   
-# samples <- read_table(here("doc/kclknoZeroExcl.csv"))
-samples <- read_table(here("doc/sampleTremula.csv"))
+#' samples
+samples <- read_table(here("doc/sampleTremula.tsv"))
 
 #' * tx2gene translation table
 #' ```{r Instructions2,eval=FALSE,echo=FALSE}
@@ -52,23 +35,18 @@ samples <- read_table(here("doc/sampleTremula.csv"))
 #' # If your species has only one transcript per gene, e.g. Picea abies v1, then
 #' # comment the next line
 #' ```
-# tx2gene <- suppressMessages(read_delim(here("data/salmonT89/tx2gene.tsv"),
-#                                        delim="\t", col_names=c("TXID","GENE")))
-tx2gene <- suppressMessages(read_delim(here("../single_cell_analysis_poplar/reference/annotation/tx2gene.tsv.gz"),
+tx2gene <- suppressMessages(read_delim(here("../single_cell_analysis_poplar/reference/annotatio/tx2gene.tsv.gz"),
                                        delim="\t", col_names=c("TXID","GENE")))
 
 #' Read the expression at the gene level
 #' ```{r CHANGEME4,eval=FALSE,echo=FALSE}
 #' If the species has only one transcript per gene, or if you are conducting QA 
 #' in transcript level replace with the following:
-
-# txi <- suppressMessages(tximport(files = samples$Filename, type = "salmon",
-#                                  tx2gene=tx2gene))
 txi <- suppressMessages(tximport(files = samples$file,type = "salmon",
                                  tx2gene=tx2gene))
 
 counts <- txi$counts
-colnames(counts) <- samples$NGI_Id
+colnames(counts) <- samples$sample
 
 #' 
 #' # Quality Control
@@ -131,73 +109,6 @@ ggplot(dat,aes(x=values,group=ind,col=SampleID)) +
 #' * Export raw expression data
 write.csv(counts,file=here("data/raw-unormalised-gene-exp.csv"))
 
-#' 
-#' # Data normalisation 
-#' ## Preparation
-#' For visualization, the data is submitted to a variance stabilization
-#' transformation using _DESeq2_. The dispersion is estimated independently
-#' of the sample tissue and replicate. 
-#'  
-#'  ```{r CHANGEME7,eval=FALSE,echo=FALSE}
-#'  # In the following, we provide the expected expression model, based on the study design.
-#'  # It is technically irrelevant here, as we are only doing the quality assessment of the data, 
-#'  # but it does not harm setting it correctly for the differential expression analyses that may follow.
-#'  ```
-#'  1. design: dds: effect of Treatment on the Time effect
-#'  = ~ Treatment + Time+ Treatment: Time
-
-#'  2. design1: dds1: effect of Treatment:  = ~ Treatment
-
-#'  3. design2: dds2: effect of Time:  = ~ Time
-
-#'  4. design3: dds3: effect of Time, while regressing out variation due 
-#'  to Treatment = ~ Treatment + Time
-#'  dds 3 means that there is no interaction- i.e, the effect of treatment is
-#'  the same in all time points
-
-#'  5. design4: dds4: effect of Time on Treatment effects (same as dds)
-#'  = ~ Time + Treatment + Time:Treatment
-
-#'  6. design5: dds5: effect of Time, while regressing out variation due 
-#'  to Treatment = ~ Time + Treatment and then use groups
-#'
-#' design = ~ Treatment + Time+ Treatment: Time) #dds
-#' design = ~ Treatment) #dds1
-#' design = ~ Time) #dds2
-#' design = ~ Treatment + Time) #dds3
-#' design = ~ Time + Treatment + Time:Treatment) #dds4
-#' design = ~ Time + Treatment) #dds5
-#'
-#' because we have onlly one set of 0h, so the model 'time + treat+time*treatment
-#' would not work directly unless we either change the sample file information:
-#' 0h 2h 4h 8h 12h 24h 48h- time points
-#' KCL/None dds, KNO3/None dds, design ~time for both
-#' KCL/KNO3 dds, design ~time*treatment or §group
-#' KCL/KNO3/None/None dds (change treatment name so None doesn't exist anymore),
-#'  design ~time*treatment
-#'
-#'  Scenario 1: KCL vs KNO3 dds excluding 0h time, then use design ~time*treatment
-# For T89:
-dds <- DESeqDataSetFromTximport(txi=txi,
-                                colData = samples, design =~Time*Treatment)
-
-#' For T89: use LRT with the same settings as KCL vs KNO3 dds excluding 0h time,
-#' then use design ~time*treatment
-# full_model <- ~ Time + Treatment + Treatment:Time
-# For LRT test, provide a reduced model, that is the full model without
-# treatment:time term:
-# reduced_model <- ~ Treatment + Time
-
-dds <- DESeqDataSetFromTximport(txi =txi, colData = samples,
-                                 design = ~ Treatment + Time + Treatment:Time)
-# Run in lrtDesq.R
-# dds_lrt_time <- DESeq(dds1, test="LRT", reduced = ~ Treatment + Time)
-# 
-# clusters <- degPatterns(cluster_rlog, metadata = meta, time="Time", 
-#                         col="Treatment")
-
-#'  Scenario 2: merge the two variables time and treat and do pairwise compare
-#' For tremula
 dds <- DESeqDataSetFromTximport(
   txi=txi, colData = samples, design =~treatmentTime)
 
@@ -244,7 +155,7 @@ nvar = 1
 
 #' An the number of possible combinations
 #' ```{r CHANGEME8,eval=FALSE,echo=FALSE}
-#' This needs to be adapted to your study design. Add or drop variables aas needed.
+#' This needs to be adapted to your study design. Add or drop variables as needed.
 #' ```
 nlevel=nlevels(dds$Treatment) *nlevels(dds$Time)
 nlevel=nlevels(dds$Time)
@@ -332,22 +243,6 @@ pvrect(hm.pvclust)
 print(hm.pvclust, digits=3)
 
 #' 
-#' ```{tech rep, echo=FALSE, eval=FALSE}
-#' # First create a new variable in your sample object called BioID that identifies uniquely technical replicates, so one value for all tech rep of the same bio rep
-#' samples$BioID <- CHANGEME
-#' # Merging technical replicates
-#' txi$counts <- sapply(split.data.frame(t(txi$counts),samples$BioID),colSums)
-#' txi$length <- sapply(split.data.frame(t(txi$length),samples$BioID),colMaxs)
-#' # Counts are now in alphabetic order, check and reorder if necessary
-#' stopifnot(colnames(txi$counts) == samples$BioID)
-#' samples <- samples[match(colnames(txi$counts),samples$BioID),]
-#' # Recreate the dds
-#' dds <- DESeqDataSetFromTximport(
-#'   txi=txi,
-#'   colData = samples,
-#'   design = ~ Tissue)
-#'```
-#'
 #' # Session Info
 #' <details><summary>Session Info</summary>
 #' ```{r session info}
