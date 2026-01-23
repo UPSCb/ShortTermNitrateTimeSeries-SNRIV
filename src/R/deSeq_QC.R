@@ -35,7 +35,7 @@ samples <- read_table(here("doc/sampleTremula.tsv"))
 #' # If your species has only one transcript per gene, e.g. Picea abies v1, then
 #' # comment the next line
 #' ```
-tx2gene <- suppressMessages(read_delim(here("../single_cell_analysis_poplar/reference/annotatio/tx2gene.tsv.gz"),
+tx2gene <- suppressMessages(read_delim(here("/mnt/reference/Populus-tremula/v2.2/annotation/tx2gene.tsv.gz"),
                                        delim="\t", col_names=c("TXID","GENE")))
 
 #' Read the expression at the gene level

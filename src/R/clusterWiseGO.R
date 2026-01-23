@@ -1,3 +1,5 @@
+#  This is for the GO enrichments in the gene coexpression networks and can be 
+# adapted for another dataset
 library(readr)
 library(topGO)
 library(dplyr)
